@@ -18,49 +18,6 @@ def string_to_bool(string):
         return False
 
 
-# Load input arguments
-try:
-    in_dir_1 = sys.argv[1]
-    in_dir_2 = sys.argv[2]
-    work_dir = sys.argv[3]
-    out_dir = sys.argv[4]
-except (IndexError, ValueError):
-    in_dir_1 = None
-    in_dir_2 = None
-    work_dir = None
-    out_dir = None
-
-try:
-    in_fields_standard_name_str = sys.argv[5]
-except (IndexError, ValueError):
-    in_fields_standard_name_str = None
-
-try:
-    time.strptime(sys.argv[6], '%Y%m%d')
-    first_date_str = sys.argv[6]
-except (IndexError, ValueError):
-    try:
-        time.strptime(sys.argv[6], '%Y-%m-%d %H:%M:%S')
-        first_date_str = sys.argv[6]
-    except (IndexError, ValueError):
-        first_date_str = None
-
-try:
-    time.strptime(sys.argv[7], '%Y%m%d')
-    last_date_str = sys.argv[7]
-except (IndexError, ValueError):
-    try:
-        time.strptime(sys.argv[7], '%Y-%m-%d %H:%M:%S')
-        last_date_str = sys.argv[7]
-    except (IndexError, ValueError):
-        last_date_str = None
-
-try:
-    verbose = string_to_bool(sys.argv[8])
-except (IndexError, ValueError):
-    verbose = True
-
-
 # Functional version
 def real_time_concatenator(in_dir_1=None, in_dir_2=None, work_dir=None, out_dir=None, in_fields_standard_name_str=None,
                            first_date_str=None, last_date_str=None, verbose=True):
@@ -114,17 +71,23 @@ def real_time_concatenator(in_dir_1=None, in_dir_2=None, work_dir=None, out_dir=
         time.sleep(sleep_time)
         return
 
-    if first_date_str is not None:
+    try:
+        first_date = time.strptime(first_date_str, '%Y%m%d')
+    except (IndexError, TypeError, ValueError):
         try:
-            first_date = time.strptime(first_date_str, '%Y%m%d')
-        except ValueError:
             first_date = time.strptime(first_date_str, '%Y-%m-%d %H:%M:%S')
+        except (IndexError, TypeError, ValueError):
+            first_date_str = None
+            first_date = None
 
-    if last_date_str is not None:
+    try:
+        last_date = time.strptime(last_date_str, '%Y%m%d')
+    except (IndexError, TypeError, ValueError):
         try:
-            last_date = time.strptime(last_date_str, '%Y%m%d')
-        except ValueError:
             last_date = time.strptime(last_date_str, '%Y-%m-%d %H:%M:%S')
+        except (IndexError, TypeError, ValueError):
+            last_date_str = None
+            last_date = None
 
     if (in_fields_standard_name_str == '') or (in_fields_standard_name_str == 'None'):
         in_fields_standard_name_str = None
@@ -143,25 +106,6 @@ def real_time_concatenator(in_dir_1=None, in_dir_2=None, work_dir=None, out_dir=
     print(' -------------------------')
     print(' Starting process...')
     print(' -------------------------')
-
-    try:
-        file_list_1 = [file for file in os.listdir(in_dir_1) if file.endswith('.nc')]
-    except FileNotFoundError:
-        file_list_1 = list()
-
-    try:
-        file_list_2 = [file for file in os.listdir(in_dir_2) if file.endswith('.nc')]
-    except FileNotFoundError:
-        file_list_2 = list()
-
-    if not file_list_1 and not file_list_2:
-        time.sleep(sleep_time)
-        print(' Error. No processable files in both input directories.', file=sys.stderr)
-        time.sleep(sleep_time)
-        print(' -------------------------')
-        return
-
-    union_file_list = list(set(file_list_1) | set(file_list_2))
 
     if not os.path.exists(work_dir):
         print(' Creating working directory.')
@@ -194,18 +138,8 @@ def real_time_concatenator(in_dir_1=None, in_dir_2=None, work_dir=None, out_dir=
             time.sleep(sleep_time)
             print(' -------------------------')
             return
-
-    if first_date_str is not None:
-        try:
-            first_date = time.strptime(first_date_str, '%Y%m%d')
-        except ValueError:
-            first_date = time.strptime(first_date_str, '%Y-%m-%d %H:%M:%S')
-
-    if last_date_str is not None:
-        try:
-            last_date = time.strptime(last_date_str, '%Y%m%d')
-        except ValueError:
-            last_date = time.strptime(last_date_str, '%Y-%m-%d %H:%M:%S')
+    else:
+        in_fields_standard_name_list = ['']
 
     if (first_date_str is not None) and (last_date_str is not None):
         if first_date > last_date:
@@ -215,71 +149,96 @@ def real_time_concatenator(in_dir_1=None, in_dir_2=None, work_dir=None, out_dir=
             print(' -------------------------')
             return
 
-    for in_dataset in union_file_list:
-        in_file_1 = in_dir_1 + '/' + in_dataset
-        in_file_1_presence = True
-        if not os.path.isfile(in_file_1):
-            in_file_1_presence = False
-        in_file_2 = in_dir_2 + '/' + in_dataset
-        in_file_2_presence = True
-        if not os.path.isfile(in_file_2):
-            in_file_2_presence = False
-        out_file = out_dir + '/' + in_dataset
-        if in_file_1_presence and in_file_2_presence:
-            merged_file = work_dir + '/' + in_dataset.replace('.nc', '_merged.nc')
-            print(' Concatenating dataset ' + in_dataset + '.')
-            pointwise_datasets_concatenator.pointwise_datasets_concatenator(
-                [in_file_1, in_file_2], merged_file, in_fields_standard_name_str=in_fields_standard_name_str,
-                first_date_str=first_date_str, last_date_str=last_date_str, verbose=verbose)
-            if not os.path.isfile(merged_file):
-                time.sleep(sleep_time)
-                print(' Warning: concatenated dataset could not be produced.', file=sys.stderr)
-                time.sleep(sleep_time)
-                print(' -------------------------')
-                continue
-            merged_time_step_check = time_check.time_check(merged_file, verbose=False)
-            if merged_time_step_check == 1:
-                time.sleep(sleep_time)
-                print(' Warning: duplicated time records in merged dataset.', file=sys.stderr)
-                time.sleep(sleep_time)
-            elif merged_time_step_check == 2:
-                time.sleep(sleep_time)
-                print(' Warning: wrong positioning records in merged dataset.', file=sys.stderr)
-                time.sleep(sleep_time)
-            elif merged_time_step_check == 3:
-                time.sleep(sleep_time)
-                print(' Warning: duplicated entries and wrong positioning records in merged dataset.', file=sys.stderr)
-                time.sleep(sleep_time)
-            merged_no_duplicates_file = merged_file.replace('.nc', '_no_duplicates.nc')
-            if (merged_time_step_check == 1) or (merged_time_step_check == 3):
-                print(' Removing time step duplicates.')
-                duplicated_records_remover.duplicated_records_remover(merged_file, merged_no_duplicates_file,
-                                                                      verbose=verbose)
-            else:
-                shutil.copy2(merged_file, merged_no_duplicates_file)
-            merged_monotonic_file = merged_file.replace('.nc', '_monotonic.nc')
-            if (merged_time_step_check == 2) or (merged_time_step_check == 3):
-                print(' Fixing time step monotonicity.')
-                records_monotonicity_fixer.records_monotonicity_fixer(merged_no_duplicates_file, merged_monotonic_file,
-                                                                      verbose=verbose)
-            else:
-                shutil.copy2(merged_no_duplicates_file, merged_monotonic_file)
-            print(' Copying file to output directory.')
-            shutil.copy2(merged_monotonic_file, out_file)
-        elif not in_file_1_presence:
-            time.sleep(sleep_time)
-            print(' Warning. Dataset ' + in_dataset + ' is not present in first datasets directory.', file=sys.stderr)
-            time.sleep(sleep_time)
-            print(' Copying it from second datasets directory to output directory.')
-            shutil.copy2(in_file_2, out_file)
-        elif not in_file_2_presence:
-            time.sleep(sleep_time)
-            print(' Warning. Dataset ' + in_dataset + ' is not present in second datasets directory.', file=sys.stderr)
-            time.sleep(sleep_time)
-            print(' Copying it from first datasets directory to output directory.')
-            shutil.copy2(in_file_1, out_file)
+    for variable_standard_name in in_fields_standard_name_list:
+        in_field_dir_1 = in_dir_1 + '/' + variable_standard_name + '/'
+        in_field_dir_2 = in_dir_2 + '/' + variable_standard_name + '/'
+        out_field_dir = out_dir + '/' + variable_standard_name + '/'
+        if not os.path.exists(out_field_dir):
+            print(' Creating output ' + variable_standard_name + ' directory.')
+            print(' -------------------------')
+            os.makedirs(out_field_dir)
+        try:
+            file_list_1 = [file for file in os.listdir(in_field_dir_1) if file.endswith('.nc')]
+        except FileNotFoundError:
+            file_list_1 = list()
 
-        # break  # to post process only the first archive in the list
+        try:
+            file_list_2 = [file for file in os.listdir(in_field_dir_2) if file.endswith('.nc')]
+        except FileNotFoundError:
+            file_list_2 = list()
+
+        if not file_list_1 and not file_list_2:
+            time.sleep(sleep_time)
+            print(' Error. No processable files in both input directories for standard_name ' + variable_standard_name +
+                  '.', file=sys.stderr)
+            time.sleep(sleep_time)
+            print(' -------------------------')
+            continue
+
+        union_file_list = list(set(file_list_1) | set(file_list_2))
+        for in_dataset in union_file_list:
+            in_file_1 = in_field_dir_1 + in_dataset
+            in_file_1_presence = True
+            if not os.path.isfile(in_file_1):
+                in_file_1_presence = False
+            in_file_2 = in_field_dir_2 + in_dataset
+            in_file_2_presence = True
+            if not os.path.isfile(in_file_2):
+                in_file_2_presence = False
+            out_file = out_field_dir + in_dataset
+            if in_file_1_presence and in_file_2_presence:
+                merged_file = work_dir + '/' + in_dataset.replace('.nc', '_merged.nc')
+                print(' Concatenating dataset ' + in_dataset + '.')
+                pointwise_datasets_concatenator.pointwise_datasets_concatenator(
+                    [in_file_1, in_file_2], merged_file, in_fields_standard_name_str=in_fields_standard_name_str,
+                    first_date_str=first_date_str, last_date_str=last_date_str, verbose=verbose)
+                if not os.path.isfile(merged_file):
+                    time.sleep(sleep_time)
+                    print(' Warning: concatenated dataset could not be produced.', file=sys.stderr)
+                    time.sleep(sleep_time)
+                    print(' -------------------------')
+                    continue
+                merged_time_step_check = time_check.time_check(merged_file, verbose=False)
+                if merged_time_step_check == 1:
+                    time.sleep(sleep_time)
+                    print(' Warning: duplicated time records in merged dataset.', file=sys.stderr)
+                    time.sleep(sleep_time)
+                elif merged_time_step_check == 2:
+                    time.sleep(sleep_time)
+                    print(' Warning: wrong positioning records in merged dataset.', file=sys.stderr)
+                    time.sleep(sleep_time)
+                elif merged_time_step_check == 3:
+                    time.sleep(sleep_time)
+                    print(' Warning: duplicated entries and wrong positioning records in merged dataset.', file=sys.stderr)
+                    time.sleep(sleep_time)
+                merged_no_duplicates_file = merged_file.replace('.nc', '_no_duplicates.nc')
+                if (merged_time_step_check == 1) or (merged_time_step_check == 3):
+                    print(' Removing time step duplicates.')
+                    duplicated_records_remover.duplicated_records_remover(merged_file, merged_no_duplicates_file,
+                                                                          verbose=verbose)
+                else:
+                    shutil.copy2(merged_file, merged_no_duplicates_file)
+                merged_monotonic_file = merged_file.replace('.nc', '_monotonic.nc')
+                if (merged_time_step_check == 2) or (merged_time_step_check == 3):
+                    print(' Fixing time step monotonicity.')
+                    records_monotonicity_fixer.records_monotonicity_fixer(merged_no_duplicates_file,
+                                                                          merged_monotonic_file, verbose=verbose)
+                else:
+                    shutil.copy2(merged_no_duplicates_file, merged_monotonic_file)
+                print(' Copying file to output directory.')
+                shutil.copy2(merged_monotonic_file, out_file)
+            elif not in_file_1_presence:
+                print(' Dataset ' + in_dataset + ' is not present in first datasets directory.')
+                print(' Copying it from second datasets directory to output directory.')
+                shutil.copy2(in_file_2, out_file)
+            elif not in_file_2_presence:
+                print(' Dataset ' + in_dataset + ' is not present in second datasets directory.')
+                print(' Copying it from first datasets directory to output directory.')
+                shutil.copy2(in_file_1, out_file)
+
+            # break  # to merge only the first archive in the list
+
+        # break  # to merge only the first standard_name in the list
 
     print(' -------------------------')
     total_run_time = time.gmtime(calendar.timegm(time.gmtime()) - start_run_time)

@@ -23,6 +23,7 @@ if plotting:
 # Global variables
 sleep_time = 0.1  # seconds
 out_fill_value = 1.e20
+depth_average_threshold = 5 / 100  # %
 # Range check
 range_check_enabled = True
 # Spike test
@@ -148,7 +149,7 @@ def time_series_post_processing(in_file=None, in_variable_standard_name=None, up
         out_time_series = pd.to_datetime(out_time_series)
     else:
         out_time_series = pd.to_datetime(in_time_data * 1.e9)
-    out_time_data = out_time_series.astype(np.int64).values / 1.e9
+    out_time_data = out_time_series.values.view().astype(np.int64) / 1.e9
 
     try:
         in_depth = in_data.variables['depth']
@@ -228,6 +229,8 @@ def time_series_post_processing(in_file=None, in_variable_standard_name=None, up
     monthly_mean_climatology_data = dict()
     monthly_std_climatology_data = dict()
     trend_information_data = dict()
+    trend_line = dict()
+    regression_model_score = dict()
     filtered_data = dict()
     filtered_density_data = dict()
     good_data = dict()
@@ -238,18 +241,34 @@ def time_series_post_processing(in_file=None, in_variable_standard_name=None, up
             climatology_data = netCDF4.Dataset(climatology_file, mode='r')
             if verbose:
                 print(' Opening historical monthly climatology average and standard deviation dataset.')
-            monthly_mean_climatology_average =\
-                climatology_data.variables[in_variable_standard_name + '_mm_clim']
-            monthly_mean_climatology_standard_deviation =\
-                climatology_data.variables[in_variable_standard_name + '_ms_clim']
+            depth_climatology_data = climatology_data.variables['depth'][...]
+            used_depth_data = np.empty(shape=0)
+            index_depth_data = []
+            for depth in range(in_depth_data.shape[0]):
+                if np.min(np.abs(depth_climatology_data - in_depth_data[depth])) <= \
+                        in_depth_data[depth] * (1 + depth_average_threshold):
+                    index_depth_data.append(
+                        np.argmin(np.abs(depth_climatology_data - in_depth_data[depth])))
+                    used_depth_data = np.append(used_depth_data, in_depth_data[depth])
+            if not all(np.isclose(used_depth_data, in_depth_data)) or (len(used_depth_data) == 0):
+                time.sleep(sleep_time)
+                print(' Warning: there are some depth values not contained in climatology. Exiting.',
+                      file=sys.stderr)
+                time.sleep(sleep_time)
+                print(' -------------------------')
+                return
+            monthly_mean_climatology_average_data =\
+                climatology_data.variables[in_variable_standard_name + '_mm_clim'][..., index_depth_data]
+            monthly_mean_climatology_standard_deviation_data =\
+                climatology_data.variables[in_variable_standard_name + '_ms_clim'][..., index_depth_data]
             trend_history_data = \
-                climatology_data.variables[in_variable_standard_name + '_trend']
-            filtered_density = \
-                climatology_data.variables[in_variable_standard_name + '_filtered_density']
+                climatology_data.variables[in_variable_standard_name + '_trend'][index_depth_data, ...]
+            filtered_density_history_data = \
+                climatology_data.variables[in_variable_standard_name + '_filtered_density'][..., index_depth_data]
             climatology_data.close()
         except FileNotFoundError:
             time.sleep(sleep_time)
-            print(' Warning: platform climatology file not found..',
+            print(' Warning: platform climatology file not found.',
                   file=sys.stderr)
             time.sleep(sleep_time)
             print(' -------------------------')
@@ -269,9 +288,12 @@ def time_series_post_processing(in_file=None, in_variable_standard_name=None, up
             good_data[iteration - 1] = np.ma.copy(out_variable_data)
             good_qc_data[iteration - 1] = np.array(1 + out_variable_data.mask * 3)
 
+        filtered_data[iteration - 1] = np.ma.copy(good_data[iteration - 1])
+
+        # Removing monthly climatology from data
         if update_mode and (iteration >= 1):
-            monthly_mean_climatology_data[iteration - 1] = monthly_mean_climatology_average[...]
-            monthly_std_climatology_data[iteration - 1] = monthly_mean_climatology_standard_deviation[...]
+            monthly_mean_climatology_data[iteration - 1] = monthly_mean_climatology_average_data
+            monthly_std_climatology_data[iteration - 1] = monthly_mean_climatology_standard_deviation_data
         else:
             monthly_mean_climatology_data[iteration - 1] = np.ma.masked_all(shape=(12, in_depth_data.shape[-1]),
                                                                             dtype=np.float32)
@@ -280,64 +302,56 @@ def time_series_post_processing(in_file=None, in_variable_standard_name=None, up
             for month in range(12):
                 if not np.invert(monthly_mask[month, ...]).all():
                     monthly_mean_climatology_data[iteration - 1][month, :] = \
-                        np.ma.mean(good_data[iteration - 1][monthly_mask[month, ...]], axis=0)
+                        np.ma.mean(filtered_data[iteration - 1][monthly_mask[month, ...]], axis=0)
                     monthly_std_climatology_data[iteration - 1][month, :] = \
-                        np.ma.std(good_data[iteration - 1][monthly_mask[month, ...]], axis=0)
+                        np.ma.std(filtered_data[iteration - 1][monthly_mask[month, ...]], axis=0)
 
         monthly_mean_series_iteration = monthly_mean_climatology_data[iteration - 1][out_month_series - 1, :]
         # monthly_std_series_iteration = monthly_std_climatology_data[iteration - 1][out_month_series - 1, :]
 
         filtered_data[iteration - 1] = \
-            (good_data[iteration - 1] - monthly_mean_series_iteration)  # / monthly_std_series_iteration
+            (filtered_data[iteration - 1] - monthly_mean_series_iteration)  # / monthly_std_series_iteration
 
         # Removing linear trend from data
         detrended_variable_data[iteration - 1] = np.ma.copy(filtered_data[iteration - 1])
-        trend_information_data[iteration - 1] = np.ma.masked_all(shape=(in_depth_data.shape[-1], 2),
-                                                                 dtype=np.float32)
+        trend_information_data[iteration - 1] = np.zeros(shape=(in_depth_data.shape[-1], 2), dtype=np.float32)
+        trend_line[iteration - 1] = np.ma.copy(detrended_variable_data[iteration - 1]) * 0
+        regression_model_score[iteration - 1] = np.zeros(shape=in_depth_data.shape[-1], dtype=np.float32)
         for depth in range(in_depth_data.shape[-1]):
             if update_mode and (iteration >= 1):
-                trend_information_data[iteration - 1][depth].mask = False
                 trend_information_data[iteration - 1][depth] = trend_history_data[depth]
-                trend_line = trend_information_data[iteration - 1][depth][0] * out_time_data + \
+                trend_line[iteration - 1][..., depth] = \
+                    trend_information_data[iteration - 1][depth][0] * out_time_data + \
                     trend_information_data[iteration - 1][depth][1]
             else:
                 data_selection = np.invert(detrended_variable_data[iteration - 1].mask[..., depth])
                 if np.all(np.invert(data_selection)):
-                    trend_information_data[iteration - 1][depth].mask = False
-                    trend_information_data[iteration - 1][depth] = np.array([0, 0])
                     continue
                 not_filled_time_data = out_time_data[data_selection]
                 not_filled_time_series = detrended_variable_data[iteration - 1][data_selection, depth]
                 try:
                     regression_model = \
                         LinearRegression().fit(not_filled_time_data[:, np.newaxis], not_filled_time_series)
-                    regression_model_score = \
+                    regression_model_score[iteration - 1][depth] = \
                         regression_model.score(not_filled_time_data[:, np.newaxis], not_filled_time_series)
-                    if regression_model_score < 0:
-                        print(' Warning: regression score too low.', file=sys.stderr)
-                        trend_information_data[iteration - 1][depth].mask = False
-                        trend_information_data[iteration - 1][depth] = np.array([0, 0])
-                        continue
-                    trend_information_data[iteration - 1][depth].mask = False
-                    trend_information_data[iteration - 1][depth] = \
-                        np.array([regression_model.coef_[0] * 86400 * 365,
-                                  np.mean(filtered_data[iteration - 1][data_selection, depth])])
-                    trend_line = regression_model.predict(out_time_data[..., np.newaxis])
+                    if regression_model_score[iteration - 1][depth] < 0:
+                        print(' Warning: regression score too low. Using direct data instead.', file=sys.stderr)
+                    else:
+                        trend_information_data[iteration - 1][depth] = \
+                            np.array([regression_model.coef_[0] * 86400 * 365, regression_model.intercept_])
+                        trend_line[iteration - 1][data_selection, depth] = \
+                            regression_model.predict(out_time_data[data_selection, np.newaxis])
                 except ValueError:
                     print(' Warning: detrending failed. Using direct data instead.', file=sys.stderr)
-                    trend_information_data[iteration - 1][depth].mask = False
-                    trend_information_data[iteration - 1][depth] = np.array([0, 0])
-                    continue
-            detrended_time_series = detrended_variable_data[iteration - 1][..., depth] - trend_line
-            detrended_variable_data[iteration - 1][..., depth] = detrended_time_series
 
+            detrended_variable_data[iteration - 1][..., depth] -= trend_line[iteration - 1][..., depth]
             filtered_data[iteration - 1][..., depth] = \
                 np.ma.copy(detrended_variable_data[iteration - 1][..., depth])
 
         distribution_variable = np.ma.copy(filtered_data[iteration - 1])
         density_samples = np.arange(-10, 10, delta_x)
         if update_mode and (iteration >= 1):
-            filtered_density_data[iteration - 1] = filtered_density
+            filtered_density_data[iteration - 1] = filtered_density_history_data
         else:
             filtered_density_data[iteration - 1] = \
                 np.empty(shape=(density_samples.shape[0], in_depth_data.shape[-1]),
@@ -483,12 +497,13 @@ def time_series_post_processing(in_file=None, in_variable_standard_name=None, up
             statistic_data_mask = \
                 interpolated_distribution < statistic_probability_threshold * delta_x
             high_data_mask = np.ones(shape=good_data[iteration - 1].shape, dtype=bool)
-            for depth in range(in_depth_data.shape[-1]):
-                for month in range(12):
-                    valid_data_depth_month = \
-                        np.where(np.invert(good_data[iteration - 1].mask[monthly_mask[month, ...], depth]))[0]
-                    if len(valid_data_depth_month) * sampling_time_seconds / 86400. < valid_data_minimum_days:
-                        high_data_mask[monthly_mask[month, ...], depth] = False
+            if not update_mode:
+                for depth in range(in_depth_data.shape[-1]):
+                    for month in range(12):
+                        valid_data_depth_month = \
+                            np.where(np.invert(good_data[iteration - 1].mask[monthly_mask[month, ...], depth]))[0]
+                        if len(valid_data_depth_month) * sampling_time_seconds / 86400. < valid_data_minimum_days:
+                            high_data_mask[monthly_mask[month, ...], depth] = False
 
             statistic_data_mask = np.logical_and(statistic_data_mask, high_data_mask)
             statistic_data_number = len(np.where(statistic_data_mask)[0])
@@ -519,9 +534,12 @@ def time_series_post_processing(in_file=None, in_variable_standard_name=None, up
                 np.round(rejected_data_depth_number / good_qc_data[iteration - 1][:, depth].size * 100, decimals=2)
 
         if iteration == routine_qc_iterations:
+            filtered_data[iteration] = np.ma.copy(good_data[iteration])
+            
+            # Removing monthly climatology from data
             if update_mode and (iteration >= 1):
-                monthly_mean_climatology_data[iteration] = monthly_mean_climatology_average[...]
-                monthly_std_climatology_data[iteration] = monthly_mean_climatology_standard_deviation[...]
+                monthly_mean_climatology_data[iteration] = monthly_mean_climatology_average_data
+                monthly_std_climatology_data[iteration] = monthly_mean_climatology_standard_deviation_data
             else:
                 monthly_mean_climatology_data[iteration] = np.ma.masked_all(shape=(12, in_depth_data.shape[-1]),
                                                                             dtype=np.float32)
@@ -530,63 +548,56 @@ def time_series_post_processing(in_file=None, in_variable_standard_name=None, up
                 for month in range(12):
                     if not np.invert(monthly_mask[month, ...]).all():
                         monthly_mean_climatology_data[iteration][month, :] = \
-                            np.ma.mean(good_data[iteration][monthly_mask[month, ...]], axis=0)
+                            np.ma.mean(filtered_data[iteration][monthly_mask[month, ...]], axis=0)
                         monthly_std_climatology_data[iteration][month, :] = \
-                            np.ma.std(good_data[iteration][monthly_mask[month, ...]], axis=0)
+                            np.ma.std(filtered_data[iteration][monthly_mask[month, ...]], axis=0)
 
             monthly_mean_series_iteration = monthly_mean_climatology_data[iteration][out_month_series - 1, :]
             # monthly_std_series_iteration = monthly_std_climatology_data[iteration][out_month_series - 1, :]
 
             filtered_data[iteration] = \
-                (good_data[iteration] - monthly_mean_series_iteration)  # / monthly_std_series_iteration
+                (filtered_data[iteration] - monthly_mean_series_iteration)  # / monthly_std_series_iteration
 
             # Removing linear trend from data
             detrended_variable_data[iteration] = np.ma.copy(filtered_data[iteration])
-            trend_information_data[iteration] = np.ma.masked_all(shape=(in_depth_data.shape[-1], 2), dtype=np.float32)
+            trend_information_data[iteration] = np.zeros(shape=(in_depth_data.shape[-1], 2), dtype=np.float32)
+            trend_line[iteration] = np.ma.copy(detrended_variable_data[iteration]) * 0
+            regression_model_score[iteration] = np.zeros(shape=in_depth_data.shape[-1], dtype=np.float32)
             for depth in range(in_depth_data.shape[-1]):
                 if update_mode and (iteration >= 1):
-                    trend_information_data[iteration][depth].mask = False
                     trend_information_data[iteration][depth] = trend_history_data[depth]
-                    trend_line = trend_information_data[iteration][depth][0] * out_time_data + \
+                    trend_line[iteration][..., depth] = \
+                        trend_information_data[iteration][depth][0] * out_time_data + \
                         trend_information_data[iteration][depth][1]
                 else:
                     data_selection = np.invert(detrended_variable_data[iteration].mask[..., depth])
                     if np.all(np.invert(data_selection)):
-                        trend_information_data[iteration][depth].mask = False
-                        trend_information_data[iteration][depth] = np.array([0, 0])
                         continue
                     not_filled_time_data = out_time_data[data_selection]
                     not_filled_time_series = detrended_variable_data[iteration][data_selection, depth]
                     try:
                         regression_model = \
                             LinearRegression().fit(not_filled_time_data[:, np.newaxis], not_filled_time_series)
-                        regression_model_score = \
+                        regression_model_score[iteration][depth] = \
                             regression_model.score(not_filled_time_data[:, np.newaxis], not_filled_time_series)
-                        if regression_model_score < 0:
-                            print(' Warning: regression score too low.', file=sys.stderr)
-                            trend_information_data[iteration][depth].mask = False
-                            trend_information_data[iteration][depth] = np.array([0, 0])
-                            continue
-                        trend_information_data[iteration][depth].mask = False
-                        trend_information_data[iteration][depth] = \
-                            np.array([regression_model.coef_[0] * 86400 * 365,
-                                      np.mean(filtered_data[iteration][data_selection, depth])])
-                        trend_line = regression_model.predict(out_time_data[..., np.newaxis])
+                        if regression_model_score[iteration][depth] < 0:
+                            print(' Warning: regression score too low. Using direct data instead.', file=sys.stderr)
+                        else:
+                            trend_information_data[iteration][depth] = \
+                                np.array([regression_model.coef_[0] * 86400 * 365, regression_model.intercept_])
+                            trend_line[iteration][data_selection, depth] = \
+                                regression_model.predict(out_time_data[data_selection, np.newaxis])
                     except ValueError:
                         print(' Warning: detrending failed. Using direct data instead.', file=sys.stderr)
-                        trend_information_data[iteration][depth].mask = False
-                        trend_information_data[iteration][depth] = np.array([0, 0])
-                        continue
 
-                detrended_time_series = detrended_variable_data[iteration][..., depth] - trend_line
-                detrended_variable_data[iteration][..., depth] = detrended_time_series
+                detrended_variable_data[iteration][..., depth] -= trend_line[iteration][..., depth]
                 filtered_data[iteration][..., depth] = \
                     np.ma.copy(detrended_variable_data[iteration][..., depth])
 
             distribution_variable = np.ma.copy(filtered_data[iteration])
             density_samples = np.arange(-10, 10, delta_x)
             if update_mode and (iteration >= 1):
-                filtered_density_data[iteration] = filtered_density
+                filtered_density_data[iteration] = filtered_density_history_data
             else:
                 filtered_density_data[iteration] = \
                     np.empty(shape=(density_samples.shape[0], in_depth_data.shape[-1]),
@@ -610,6 +621,23 @@ def time_series_post_processing(in_file=None, in_variable_standard_name=None, up
     # Plotting part (OPTIONAL)
     if plotting:
         for depth in range(in_depth_data.shape[-1]):
+            plt.plot(out_time_series, good_data[-1][..., depth] - np.ma.mean(good_data[-1][..., depth]),
+                     label='Original data')
+            plt.plot(out_time_series, detrended_variable_data[-1][..., depth], label='Detrended data, slope = ' +
+                                                                                     str(np.around(
+                                                                                         trend_information_data[-1][
+                                                                                             0, 0], decimals=3)) +
+                                                                                     ', score = ' + str(
+                np.around(regression_model_score[-1][depth], decimals=3)))
+
+            plt.plot(out_time_series, trend_line[-1][..., depth], label='Regression trend line')
+            plt.legend()
+            plt.title(os.path.basename(in_file) + ' trend view ' + str(in_depth_data[depth]) + 'm')
+            manager = plt.get_current_fig_manager()
+            manager.window.wm_geometry("+1920+0")
+            manager.resize(1680, 1050)
+            plt.show()
+
             # plt.plot(out_time_series, out_variable_data[:, depth, ...], label='Original data')
             plt.plot(out_time_series, range_checked_data[:, depth, ...], label='Range check')
             plt.plot(out_time_series, spike_checked_data[:, depth, ...], label='Spike test')
@@ -683,7 +711,6 @@ def time_series_post_processing(in_file=None, in_variable_standard_name=None, up
     out_data.createDimension('month', 12)
     out_data.createDimension('iteration', routine_qc_iterations + 1)
     out_data.createDimension('samples', len(density_samples))
-    out_data.createDimension('axis_nbounds', 2)
 
     # Creating dimension variables
     out_dimension_variables = ['lon', 'lat', 'depth', 'time']
@@ -697,7 +724,7 @@ def time_series_post_processing(in_file=None, in_variable_standard_name=None, up
                                                              dimensions=in_dimension_variable.dimensions,
                                                              zlib=True, complevel=1)
             if dimension_variable_name == 'time':
-                out_dimension_variable_data = out_time_series.values.astype('datetime64[s]')
+                out_dimension_variable_data = out_time_series.values.view().astype('datetime64[s]')
             elif time_rounding and (in_dimension_variable_data.shape[0] > len(out_time_series)):
                 delete_mask = np.ones(in_dimension_variable_data.shape[0], dtype=bool)
                 delete_mask[duplicated_indices] = False
@@ -831,19 +858,18 @@ def time_series_post_processing(in_file=None, in_variable_standard_name=None, up
         np.float32(np.ma.max(monthly_std_climatology_variable[...]))
 
     if verbose:
-        print(' Creating iterative trend information data profile.')
-    out_trend_information_variable = out_data.createVariable(in_variable_standard_name + '_trend',
-                                                             datatype=np.float32,
-                                                             dimensions=('depth', 'axis_nbounds', 'iteration'))
+        print(' Creating iterative trend line data.')
+    out_trend_line_variable = out_data.createVariable(in_variable_standard_name + '_trend', datatype=np.float32,
+                                                      dimensions=('time', 'depth', 'iteration'))
     for iteration in range(routine_qc_iterations + 1):
-        out_trend_information_variable[..., iteration] = trend_information_data[iteration]
-    out_trend_information_variable.long_name = 'Trend Information Data Vertical Profile'
-    out_trend_information_variable.standard_name = 'trend_information_data'
-    out_trend_information_variable.units = in_variable.units
-    out_trend_information_variable.valid_min = \
-        np.float32(np.ma.min(out_trend_information_variable[...]))
-    out_rejected_data_percentage_profile_variable.valid_max = \
-        np.float32(np.ma.max(out_trend_information_variable[...]))
+        out_trend_line_variable[..., iteration] = trend_line[iteration]
+    out_trend_line_variable.long_name = 'Anomaly Trend Line Data'
+    out_trend_line_variable.standard_name = 'anomaly_trend_line_data'
+    out_trend_line_variable.units = in_variable.units
+    out_trend_line_variable.valid_min =\
+        np.float32(np.ma.min(out_trend_line_variable[...]))
+    out_rejected_data_percentage_profile_variable.valid_max =\
+        np.float32(np.ma.max(out_trend_line_variable[...]))
 
     if verbose:
         print(' Creating iterative filtered data variable.')

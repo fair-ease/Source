@@ -588,7 +588,7 @@ def metadata_merger(base_csv_dir=None, update_csv_dir=None, merged_csv_dir=None,
                       file=sys.stderr)
                 time.sleep(sleep_time)
             update_probe_type = update_probes_types[update_probes_row]
-            if update_probe_type == '':
+            if (update_probe_type == '') or base_is_dominant:
                 merged_probe_type = base_probe_type
             else:
                 merged_probe_type = update_probe_type
@@ -598,7 +598,7 @@ def metadata_merger(base_csv_dir=None, update_csv_dir=None, merged_csv_dir=None,
                       file=sys.stderr)
                 time.sleep(sleep_time)
             update_probe_organization = update_probes_organizations[update_probes_row]
-            if update_probe_organization == '':
+            if (update_probe_organization == '') or base_is_dominant:
                 merged_probe_organization = base_probe_organization
             else:
                 merged_probe_organization = update_probe_organization

@@ -26,9 +26,9 @@ follow a specific standard format.
 SOURCE usability is subjected to Creative Commons CC-BY-SA-NC license.
 
 ## How to cite
-If you use this software, please cite the following article:
+If you use this software, please cite the following article: SOURCE: Sea Observations Utility for Reprocessing, Calibration and Evaluation. Here it is the citation:
 ```
-TODO
+https://doi.org/10.3389/fmars.2021.750387
 ```
 ## Code location
 The code development is carried out using **git**, a distributed **version control system**, 
@@ -39,7 +39,7 @@ with a Creative Commons CC-BY-SA-NC license.
 ## Installation
 User has to download the latest release in zipped version from here:
 ```
-TODO
+http://doi.org/10.5281/zenodo.5008245
 ```
 Alternatively, using **git** SOURCE source code can be cloned directly from a branch:
 ```
@@ -193,7 +193,7 @@ The observations module consists in 4 sub modules:
     1. Preprocess the data using **insitu_tac_pre_processing** from **obs_postpro** module;
     2. Reprocess the preprocessed data using **obs_postpro**.
 * Create a reprocessed in situ update database (**update** mode):
-    1. Preprocess the new data using **insitu_tac_pre_processing** from **obs_postpro** module;
+    1. Preprocess the new data using **insitu_tac_pre_processing** with update mode activated from **obs_postpro** module;
     2. Reprocess the preprocessed data using **obs_postpro**, giving the climatology directory of the historical collection.
 * Concatenate historical databases with an **update**:
     1. Merge the in situ relational DBs using **metadata_merger**;
@@ -204,7 +204,7 @@ The observations module consists in 4 sub modules:
 ### CMEMS in situ TAC pre processing sub-module
 ```
 insitu_tac_pre_processing(in_dir, in_fields_standard_name_str, work_dir, out_dir, valid_qc_values,
-                          first_date_str, last_date_str, region_boundaries_str, med_sea_masking, 
+                          update_mode, first_date_str, last_date_str, region_boundaries_str, med_sea_masking, 
                           in_instrument_types_str, names_file, verbose)
 ```
 CMEMS in situ Thematic Assembly Center (TAC) observations pre processing.
@@ -228,6 +228,7 @@ Please read [CMEMS Product User Manual (PUM)](https://resources.marine.copernicu
  to properly set the flag values.
 
 #### **Optional inputs**
+* **update_mode** (default **False**): run the module in update mode, will disable low data platforms filtering;
 * **first_date_str** (default **None**): start date in YYYYMMDD or in YYYY-MM-DD HH:MM:SS format.;
 * **last_date_str** (default **None**): end date in YYYYMMDD or in YYYY-MM-DD HH:MM:SS format;
 * **region_boundaries_str** (default **"-180 180 0 180"**): region longitude - latitude limits (space separated string, 

@@ -147,7 +147,7 @@ def insitu_tac_platforms_finder(in_list=None, longitude_mean=None, latitude_mean
         in_data = netCDF4.Dataset(in_file, mode='r')
         in_platform_code = in_data.platform_code
         try:
-            in_probe_name = in_data.platform_name
+            in_probe_name = unidecode.unidecode(in_data.platform_name.replace(',', ''))
         except AttributeError:
             in_probe_name = ''
         try:

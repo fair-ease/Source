@@ -75,6 +75,7 @@ def pointwise_datasets_concatenator(in_list=None, out_file=None, in_fields_stand
         print(' 6) (optional) verbosity switch (True or False) (default: True).', file=sys.stderr)
         time.sleep(sleep_time)
         return
+
     try:
         in_list = in_list.split(' ')
     except AttributeError:
@@ -88,6 +89,25 @@ def pointwise_datasets_concatenator(in_list=None, out_file=None, in_fields_stand
             time.sleep(sleep_time)
             print(' -------------------------')
             return
+
+    try:
+        first_date = time.strptime(first_date_str, '%Y%m%d')
+    except (IndexError, TypeError, ValueError):
+        try:
+            first_date = time.strptime(first_date_str, '%Y-%m-%d %H:%M:%S')
+        except (IndexError, TypeError, ValueError):
+            first_date_str = None
+            first_date = None
+
+    try:
+        last_date = time.strptime(last_date_str, '%Y%m%d')
+    except (IndexError, TypeError, ValueError):
+        try:
+            last_date = time.strptime(last_date_str, '%Y-%m-%d %H:%M:%S')
+        except (IndexError, TypeError, ValueError):
+            last_date_str = None
+            last_date = None
+
     if verbose:
         print(' Input list = ' + ', '.join(file_list))
         print(' Output concatenated dataset file name = ' + out_file)
@@ -101,6 +121,7 @@ def pointwise_datasets_concatenator(in_list=None, out_file=None, in_fields_stand
         print(' -------------------------')
         print(' Starting process...')
         print(' -------------------------')
+
     if (in_fields_standard_name_str == '') or (in_fields_standard_name_str == 'None'):
         in_fields_standard_name_str = None
 
@@ -112,18 +133,6 @@ def pointwise_datasets_concatenator(in_list=None, out_file=None, in_fields_stand
             time.sleep(sleep_time)
             print(' -------------------------')
             return
-
-    if first_date_str is not None:
-        try:
-            first_date = time.strptime(first_date_str, '%Y%m%d')
-        except ValueError:
-            first_date = time.strptime(first_date_str, '%Y-%m-%d %H:%M:%S')
-
-    if last_date_str is not None:
-        try:
-            last_date = time.strptime(last_date_str, '%Y%m%d')
-        except ValueError:
-            last_date = time.strptime(last_date_str, '%Y-%m-%d %H:%M:%S')
 
     if (first_date_str is not None) and (last_date_str is not None):
         if first_date > last_date:
@@ -444,7 +453,10 @@ def pointwise_datasets_concatenator(in_list=None, out_file=None, in_fields_stand
                     except AttributeError:
                         work_variable_fill_value[in_index][variable_name] = None
                     try:
-                        time_dimension_condition = in_variable_data.shape[0] == time_dimensions[in_index]
+                        if not work_variable_dimensions[in_index][variable_name] == (depth_dimension_name,):
+                            time_dimension_condition = in_variable_data.shape[0] == time_dimensions[in_index]
+                        else:
+                            time_dimension_condition = False
                     except IndexError:
                         time_dimension_condition = False
                     if first_file:
@@ -459,6 +471,7 @@ def pointwise_datasets_concatenator(in_list=None, out_file=None, in_fields_stand
                         try:
                             first_available_variable = first_available_data.variables[variable_name]
                             first_available_variable_data = first_available_variable[...]
+                            first_available_variable_dimensions = first_available_variable.dimensions
                             break
                         except KeyError:
                             first_available_data.close()
@@ -486,8 +499,11 @@ def pointwise_datasets_concatenator(in_list=None, out_file=None, in_fields_stand
                     work_variable_datatypes[in_index][variable_name] = None
                     work_variable_dimensions[in_index][variable_name] = None
                     work_variable_fill_value[in_index][variable_name] = None
-                    time_dimension_condition = \
-                        first_available_variable_data.shape[0] == time_dimensions[first_available_index]
+                    if not first_available_variable_dimensions == (depth_dimension_name,):
+                        time_dimension_condition = \
+                            first_available_variable_data.shape[0] == time_dimensions[first_available_index]
+                    else:
+                        time_dimension_condition = False
                     if first_file:
                         variable_attributes[variable_name] = \
                             {attr: first_available_variable.getncattr(attr)
@@ -595,10 +611,18 @@ def pointwise_datasets_concatenator(in_list=None, out_file=None, in_fields_stand
                         next(fill_value for fill_value in fill_value_list if fill_value is not None)
             except ValueError:
                 out_variable_fill_value[variable_name] = None
+            try:
+                if not work_variable_dimensions[in_index][variable_name] == (depth_dimension_name,):
+                    time_dimension_condition = \
+                        work_variable_data[in_index][variable_name].shape[0] == time_dimensions[in_index]
+                else:
+                    time_dimension_condition = False
+            except IndexError:
+                time_dimension_condition = False
             if not out_variable_dimensions[variable_name]:
                 out_variable_data[variable_name] = \
                     np.empty(shape=(0,), dtype=out_variable_datatypes[variable_name])
-            elif work_variable_data[in_index][variable_name].shape[0] == time_dimensions[in_index]:
+            elif time_dimension_condition:
                 if depth_dimension_name in out_variable_dimensions[variable_name]:
                     out_variable_data[variable_name] = \
                         np.ma.empty(shape=(0, out_depth_dimension)
@@ -679,8 +703,12 @@ def pointwise_datasets_concatenator(in_list=None, out_file=None, in_fields_stand
                             (depth_dimensions[in_index] >= depth_dimensions[second_index]):
                         for variable_name in out_variables:
                             try:
-                                time_dimension_condition = \
-                                    work_variable_data[in_index][variable_name].shape[0] == time_dimensions[in_index]
+                                if not work_variable_dimensions[in_index][variable_name] == (depth_dimension_name,):
+                                    time_dimension_condition = \
+                                        work_variable_data[in_index][variable_name].shape[0] == \
+                                        time_dimensions[in_index]
+                                else:
+                                    time_dimension_condition = False
                             except IndexError:
                                 time_dimension_condition = False
                             if time_dimension_condition:
@@ -749,9 +777,12 @@ def pointwise_datasets_concatenator(in_list=None, out_file=None, in_fields_stand
                             (depth_dimensions[in_index] < depth_dimensions[second_index]):
                         for variable_name in out_variables:
                             try:
-                                time_dimension_condition = \
-                                    work_variable_data[second_index][variable_name].shape[0] == \
-                                    time_dimensions[second_index]
+                                if not work_variable_dimensions[second_index][variable_name] == (depth_dimension_name,):
+                                    time_dimension_condition = \
+                                        work_variable_data[second_index][variable_name].shape[0] == \
+                                        time_dimensions[second_index]
+                                else:
+                                    time_dimension_condition = False
                             except IndexError:
                                 time_dimension_condition = False
                             if time_dimension_condition:
@@ -816,8 +847,11 @@ def pointwise_datasets_concatenator(in_list=None, out_file=None, in_fields_stand
             skip_indices[in_index] = True
             for variable_name in out_variables:
                 try:
-                    time_dimension_condition = \
-                        work_variable_data[in_index][variable_name].shape[0] == time_dimensions[in_index]
+                    if not work_variable_dimensions[in_index][variable_name] == (depth_dimension_name,):
+                        time_dimension_condition = \
+                            work_variable_data[in_index][variable_name].shape[0] == time_dimensions[in_index]
+                    else:
+                        time_dimension_condition = False
                 except IndexError:
                     time_dimension_condition = False
                 if time_dimension_condition:
@@ -839,8 +873,11 @@ def pointwise_datasets_concatenator(in_list=None, out_file=None, in_fields_stand
             for in_index in range(len(work_variable_data)):
                 if not skip_indices[in_index]:
                     try:
-                        time_dimension_condition = \
-                            work_variable_data[in_index][variable_name].shape[0] == time_dimensions[in_index]
+                        if not work_variable_dimensions[in_index][variable_name] == (depth_dimension_name,):
+                            time_dimension_condition = \
+                                work_variable_data[in_index][variable_name].shape[0] == time_dimensions[in_index]
+                        else:
+                            time_dimension_condition = False
                     except IndexError:
                         time_dimension_condition = False
                     if time_dimension_condition:

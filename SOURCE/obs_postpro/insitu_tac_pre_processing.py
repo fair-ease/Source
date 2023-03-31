@@ -21,7 +21,7 @@ mean_duplicate_threshold = 0.0045  # degrees
 # To prevent latitude-longitude error accumulation in average process
 variance_duplicate_threshold = 1  # degrees
 minimum_records_threshold = 2  # For time step calculation
-minimum_record_days_threshold = 30  # For low time series segments removal
+minimum_record_days_threshold = 30  # For low time series segments removal, only creation mode
 
 # Biscay Gulf limits
 biscay_gulf_min_lon = -9.25
@@ -57,7 +57,7 @@ def string_to_bool(string):
 
 # Functional version
 def insitu_tac_pre_processing(in_dir=None, in_fields_standard_name_str=None, work_dir=None, out_dir=None,
-                              valid_qc_values=None, first_date_str=None, last_date_str=None,
+                              valid_qc_values=None, update_mode=None, first_date_str=None, last_date_str=None,
                               region_boundaries_str=None, med_sea_masking=False, in_instrument_types_str=None,
                               names_file=None, verbose=True):
     """
@@ -78,24 +78,26 @@ def insitu_tac_pre_processing(in_dir=None, in_fields_standard_name_str=None, wor
 
         5) Original DAC valid quality flags to use (space separated string, example: "0 1 2");
 
-        6) Start date in YYYYMMDD or in YYYY-MM-DD HH:MM:SS format (OPTIONAL);
+        6) Update mode execution switch (True or False) (OPTIONAL);
 
-        7) End date in YYYYMMDD or in YYYY-MM-DD HH:MM:SS (OPTIONAL);
+        7) Start date in YYYYMMDD or in YYYY-MM-DD HH:MM:SS format (OPTIONAL);
 
-        8) Region longitude - latitude limits space separated string
+        8) End date in YYYYMMDD or in YYYY-MM-DD HH:MM:SS (OPTIONAL);
+
+        9) Region longitude - latitude limits space separated string
             (min_lon, max_lon (deg E); min_lat, max_lat (deg N), OPTIONAL);
 
-        9) Masking foreign seas switch for Mediterranean Sea processing (OPTIONAL);
+        10) Masking foreign seas switch for Mediterranean Sea processing (OPTIONAL);
 
-        10) Input CMEMS "instrument type" metadata filter space separated string, OPTIONAL);
+        11) Input CMEMS "instrument type" metadata filter space separated string, OPTIONAL);
             (for example: "\"mooring\" \"coastal structure\"", please read CMEMS manual to properly write
             the attribute string, PLEASE put attributes with spaces with quotes to protect them from character escaping)
 
-        11) Platform names CSV table (OPTIONAL) with two columns:
+        12) Platform names CSV table (OPTIONAL) with two columns:
             a) Platform code;
             b) platform name;
 
-        12) verbosity switch (OPTIONAL).
+        13) verbosity switch (OPTIONAL).
 
     Output:
 
@@ -163,7 +165,7 @@ def insitu_tac_pre_processing(in_dir=None, in_fields_standard_name_str=None, wor
     if in_dir is None or in_fields_standard_name_str is None or work_dir is None or out_dir is None or \
             valid_qc_values is None:
         time.sleep(sleep_time)
-        print(' ERROR: 5 of 12 maximum arguments (7 optionals) not provided.', file=sys.stderr)
+        print(' ERROR: 5 of 13 maximum arguments (7 optionals) not provided.', file=sys.stderr)
         print(' 1) Input observations netCDF database directory;', file=sys.stderr)
         print(' 2) Input fields standard_name space separated string to process'
               ' (for example: "sea_water_temperature sea_water_practical_salinity");', file=sys.stderr)
@@ -171,21 +173,22 @@ def insitu_tac_pre_processing(in_dir=None, in_fields_standard_name_str=None, wor
         print(' 4) Output directory;', file=sys.stderr)
         print(' 5) input variable valid qc values to consider (spaced valued string, for example: "0 1 2");',
               file=sys.stderr)
-        print(' 6) (optional) First date to evaluate in YYYYMMDD or YYYY-MM-DD HH:MM:SS format'
+        print(' 6) update mode execution switch (True or False) (default: False);', file=sys.stderr)
+        print(' 7) (optional) First date to evaluate in YYYYMMDD or YYYY-MM-DD HH:MM:SS format'
               ' (default: first recorded date for each platform);', file=sys.stderr)
-        print(' 7) (optional) Last date to evaluate in YYYYMMDD or YYYY-MM-DD HH:MM:SS format'
+        print(' 8) (optional) Last date to evaluate in YYYYMMDD or YYYY-MM-DD HH:MM:SS format'
               ' (default: last recorded date for each platform);', file=sys.stderr)
-        print(' 8) (optional) Region longitude - latitude limits space separated string'
+        print(' 9) (optional) Region longitude - latitude limits space separated string'
               ' (min_lon, max_lon (deg E); min_lat, max_lat (deg N), default: "-180 180 0 180" (all the Earth))',
               file=sys.stderr)
-        print(' 9) (optional) Masking foreign seas switch for Mediterranean Sea processing switch (True or False)'
+        print(' 10) (optional) Masking foreign seas switch for Mediterranean Sea processing switch (True or False)'
               ' (default: False).', file=sys.stderr)
-        print(' 10) (optional) Input CMEMS "instrument type" metadata filter (space separated string, '
+        print(' 11) (optional) Input CMEMS "instrument type" metadata filter (space separated string, '
               ' for example: \'"mooring" "coastal structure"\');', file=sys.stderr)
-        print(' 11) (optional) Platform CSV names table (default: internal file) with two columns:', file=sys.stderr)
+        print(' 12) (optional) Platform CSV names table (default: internal file) with two columns:', file=sys.stderr)
         print('     a) Platform code;', file=sys.stderr)
         print('     b) platform name;', file=sys.stderr)
-        print(' 12) (optional) verbosity switch (True or False) (default: True).', file=sys.stderr)
+        print(' 13) (optional) verbosity switch (True or False) (default: True).', file=sys.stderr)
         time.sleep(sleep_time)
         return
 
@@ -252,6 +255,7 @@ def insitu_tac_pre_processing(in_dir=None, in_fields_standard_name_str=None, wor
     print(' Working directory = ' + work_dir)
     print(' Output directory = ' + out_dir)
     print(' Valid qc values to consider = ' + valid_qc_values)
+    print(' Update mode = ' + str(update_mode))
     print(' First date to process = ' + str(first_date_str) +
           ' (if None it will be the first available date on each platform)')
     print(' Last date to process = ' + str(last_date_str) +
@@ -451,6 +455,8 @@ def insitu_tac_pre_processing(in_dir=None, in_fields_standard_name_str=None, wor
             platform_name = in_data.platform_name
         except AttributeError:
             platform_name = ''
+        if platform_name != '':
+            print(print_prefix + ' platform name = \'' + platform_name + '\'')
         try:
             wmo = in_data.wmo_platform_code
         except AttributeError:
@@ -1198,7 +1204,7 @@ def insitu_tac_pre_processing(in_dir=None, in_fields_standard_name_str=None, wor
                 else:
                     valid_depth_levels[-1] = 'floating'
                 dac_qc_time_delta = datetime.timedelta(seconds=end_date_seconds - start_date_seconds)
-                if dac_qc_time_delta < datetime.timedelta(days=minimum_record_days_threshold):
+                if (not update_mode) and (dac_qc_time_delta < datetime.timedelta(days=minimum_record_days_threshold)):
                     time.sleep(sleep_time)
                     print(' Warning:' + print_prefix +
                           ' DAC qc file record segment is below ' + str(minimum_record_days_threshold) +
@@ -1394,40 +1400,45 @@ if os.path.basename(sys.argv[0]) == os.path.basename(__file__):
         valid_qc_values = None
 
     try:
-        first_date_str = sys.argv[6]
+        update_mode = string_to_bool(sys.argv[6])
+    except (IndexError, ValueError):
+        update_mode = False
+
+    try:
+        first_date_str = sys.argv[7]
     except (IndexError, ValueError):
         first_date_str = None
 
     try:
-        last_date_str = sys.argv[7]
+        last_date_str = sys.argv[8]
     except (IndexError, ValueError):
         last_date_str = None
 
     try:
-        region_boundaries_str = sys.argv[8]
+        region_boundaries_str = sys.argv[9]
     except (IndexError, ValueError):
         region_boundaries_str = None
 
     try:
-        med_sea_masking = string_to_bool(sys.argv[9])
+        med_sea_masking = string_to_bool(sys.argv[10])
     except (IndexError, ValueError):
         med_sea_masking = False
 
     try:
-        in_instrument_types_str = sys.argv[10]
+        in_instrument_types_str = sys.argv[11]
     except (IndexError, ValueError):
         in_instrument_types_str = None
 
     try:
-        names_file = sys.argv[11]
+        names_file = sys.argv[12]
     except (IndexError, ValueError):
         names_file = None
 
     try:
-        verbose = string_to_bool(sys.argv[12])
+        verbose = string_to_bool(sys.argv[13])
     except (IndexError, ValueError):
         verbose = True
 
     insitu_tac_pre_processing(in_dir, in_fields_standard_name_str, work_dir, out_dir, valid_qc_values,
-                              first_date_str, last_date_str, region_boundaries_str, med_sea_masking,
+                              update_mode, first_date_str, last_date_str, region_boundaries_str, med_sea_masking,
                               in_instrument_types_str, names_file, verbose)

@@ -205,6 +205,8 @@ def model_datasets_concatenator(in_list=None, in_variable_standard_name=None, in
         model_time_reference = model_time.units
         if 'days' in model_time_reference:
             model_time_data = np.round(model_time[...] * 86400.)
+        elif 'minutes' in model_time_reference:
+            model_time_data = np.round(model_time[...] * 60.)
         elif 'seconds' in model_time_reference:
             model_time_data = np.round(model_time[...])
         model_time_reference = model_time_reference[model_time_reference.find('since ') + len('since '):]

@@ -672,8 +672,8 @@ def obs_postpro(in_csv_dir=None, in_dir=None, in_fields_standard_name_str=None, 
 
             if not is_floating_probe:
                 depth_aggregated_file = work_field_dir + out_field_file_name + '_depth-aggregated.nc'
-                depth_aggregator.depth_aggregator(in_file, probe_depth,
-                                                  depth_aggregated_file, verbose=verbose)
+                depth_aggregator.depth_aggregator(in_file, probe_depth, depth_aggregated_file,
+                                                  first_date_str, last_date_str, verbose=verbose)
                 if not os.path.isfile(depth_aggregated_file):
                     time.sleep(sleep_time)
                     print(' Warning:' + print_prefix + ' depth aggregated file not produced.', file=sys.stderr)
@@ -766,7 +766,6 @@ def obs_postpro(in_csv_dir=None, in_dir=None, in_fields_standard_name_str=None, 
             if routine_qc_iterations >= 0:
                 quality_checked_file = work_field_dir + out_field_file_name + '_quality-checked.nc'
                 if update_mode:
-                    climatology_dir += '/climatology/'
                     if not os.path.exists(climatology_dir):
                         time.sleep(sleep_time)
                         print(' Error. platform climatology directory not found.', file=sys.stderr)
@@ -790,6 +789,7 @@ def obs_postpro(in_csv_dir=None, in_dir=None, in_fields_standard_name_str=None, 
                           file=sys.stderr)
                     time.sleep(sleep_time)
                     print(print_prefix + ' -------------------------')
+                    continue
                 post_processed_file = work_field_dir + out_field_file_name + '_post-processed.nc'
                 print(print_prefix + ' Producing post processed field file for analysis...')
                 out_stat_variable = \

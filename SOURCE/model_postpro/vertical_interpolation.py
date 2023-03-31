@@ -20,8 +20,8 @@ def string_to_bool(string):
 
 # Functional version
 def vertical_interpolation(in_file=None, depth_array_str=None, out_file=None, verbose=True):
-    if __name__ == '__main__':
-        return
+    # if __name__ == '__main__':
+    #     return
     if verbose:
         print(' -------------------------' + ' ' + __file__ + ' -------------------------')
         print(' Script to compute vertical linear interpolation in depth dimension.')
@@ -196,14 +196,23 @@ def vertical_interpolation(in_file=None, depth_array_str=None, out_file=None, ve
     copy_surface_indices = np.empty(shape=0, dtype=np.int64)
     copy_bottom_indices = np.empty(shape=0, dtype=np.int64)
     for depth_index in range(len(out_depth_data)):
-        if (out_depth_data[depth_index] < in_depth_data[0]) and \
+        if (out_depth_data[depth_index] <= in_depth_data[0]) and \
                 (in_depth_data[0] < 2 and out_depth_data[depth_index] < 2):
             copy_surface_indices = np.append(copy_surface_indices, depth_index)
+        elif (in_depth_data.shape[-1] == 1) and (out_depth_data[depth_index] < in_depth_data[0]) and \
+                ((in_depth_data[0] <= 700 and out_depth_data[depth_index] > in_depth_data[0] * 0.9) or
+                 (in_depth_data[0] > 700 and out_depth_data[depth_index] > in_depth_data[0] * 0.8)):
+            copy_surface_indices = np.append(copy_surface_indices, depth_index)
+        elif (in_depth_data.shape[-1] == 1) and (out_depth_data[depth_index] >= in_depth_data[0]) and \
+                ((in_depth_data[0] <= 700 and out_depth_data[depth_index] < in_depth_data[0] * 1.1) or
+                 (in_depth_data[0] > 700 and out_depth_data[depth_index] < in_depth_data[0] * 1.2)):
+            copy_surface_indices = np.append(copy_surface_indices, depth_index)
     for depth_index in reversed(range(len(out_depth_data))):
-        if (out_depth_data[depth_index] > in_depth_data[last_true_depth_index]) and \
-                ((in_depth_data[last_true_depth_index] < 700 and out_depth_data[depth_index] <
+        if (out_depth_data[depth_index] >= in_depth_data[last_true_depth_index]) and \
+                ((in_depth_data[last_true_depth_index] <= 700 and out_depth_data[depth_index] <
                   in_depth_data[last_true_depth_index] * 1.1) or
-                    (out_depth_data[depth_index] < in_depth_data[last_true_depth_index] * 1.2)):
+                    (in_depth_data[0] > 700 and out_depth_data[depth_index] <
+                      in_depth_data[last_true_depth_index] * 1.2)):
             copy_bottom_indices = np.append(copy_bottom_indices, depth_index)
 
     if verbose:
@@ -292,9 +301,10 @@ def vertical_interpolation(in_file=None, depth_array_str=None, out_file=None, ve
                     print(' Warning. Trying to interpolate one depth value with more than one depth values.' +
                           ' Skipping...', file=sys.stderr)
                     return
+                out_variable_data = np.ma.masked_all(shape=in_variable_data.shape)
             for depth_index in copy_surface_indices:
                 if verbose:
-                    print('Copying data at depth ' +
+                    print(' Copying data at depth ' +
                           str(np.round(np.float32(in_depth_data[0]), decimals=2)) +
                           'm to output data at depth ' +
                           str(np.round(np.float32(out_depth_data[depth_index]), decimals=2)) + 'm.')
@@ -338,8 +348,6 @@ def vertical_interpolation(in_file=None, depth_array_str=None, out_file=None, ve
     global_attributes = [element for element in in_data.ncattrs() if not element.startswith('history')]
     out_data.setncatts({attribute: in_data.getncattr(attribute) for attribute in global_attributes})
     out_data.institution = 'Istituto Nazionale di Geofisica e Vulcanologia - Bologna, Italy'
-    out_data.editor = 'Paolo Oliveri'
-    out_data.contact = 'paolo.oliveri@ingv.it'
     out_data.Conventions = 'CF-1.6'
     out_data.field_type = 'Vertical interpolated model data'
     out_data.history = \
