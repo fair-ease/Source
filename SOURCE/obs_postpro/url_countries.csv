@@ -1,0 +1,262 @@
+top-level_domain,country
+.af,Afghanistan
+.ax,Åland
+.al,Albania
+.dz,Algeria
+.as,American Samoa
+.ad,Andorra
+.ao,Angola
+.ai,Anguilla
+.aq,Antarctica
+.ag,Antigua and Barbuda
+.ar,Argentina
+.am,Armenia
+.aw,Aruba
+.ac,Ascension Island
+.au,Australia
+.at,Austria
+.az,Azerbaijan
+.bs,Bahamas
+.bh,Bahrain
+.bd,Bangladesh
+.bb,Barbados
+.eus,Basque Country
+.by,Belarus
+.be,Belgium
+.bz,Belize
+.bj,Benin
+.bm,Bermuda
+.bt,Bhutan
+.bo,Bolivia
+.bq,Bonaire
+.ba,Bosnia and Herzegovina
+.bw,Botswana
+.bv,Bouvet Island
+.br,Brazil
+.io,British Indian Ocean Territory
+.vg,British Virgin Islands
+.bn,Brunei
+.bg,Bulgaria
+.bf,Burkina Faso
+.mm,Burma
+.bi,Burundi
+.kh,Cambodia
+.cm,Cameroon
+.ca,Canada
+.cv,Cape Verde
+.cat,Catalonia
+.ky,Cayman Islands
+.cf,Central African Republic
+.td,Chad
+.cl,Chile
+.cn,People’s Republic of China
+.cx,Christmas Island
+.cc,Cocos (Keeling) Islands
+.co,Colombia
+.km,Comoros
+.cd,Democratic Republic of Congo
+.cg,Republic of Congo
+.ck,Cook Islands
+.cr,Costa Rica
+.ci,Côte d’Ivoire
+.hr,Croatia
+.cu,Cuba
+.cw,Curaçao
+.cy,Cyprus
+.cz,Czechia (Czech Republic)
+.dk,Denmark
+.dj,Djibouti
+.dm,Dominica
+.do,Dominican Republic
+.tl,East Timor
+.ec,Ecuador
+.eg,Egypt
+.sv,El Salvador
+.gq,Equatorial Guinea
+.er,Eritrea
+.ee,Estonia
+.et,Ethiopia
+.eu,European Union
+.fk,Falkland Islands
+.fo,Faeroe Islands
+.fm,Federated States of Micronesia
+.fj,Fiji
+.fi,Finland
+.fr,France
+.gf,French Guiana
+.pf,French Polynesia
+.tf,French Southern and Antarctic Lands
+.ga,Gabon
+.gal,Galicia
+.gm,Gambia
+.ps,Gaza Strip (Gaza)
+.ge,Georgia
+.de,Germany
+.gh,Ghana
+.gi,Gibraltar
+.gr,Greece
+.gl,Greenland
+.gd,Grenada
+.gp,Guadeloupe
+.gu,Guam
+.gt,Guatemala
+.gg,Guernsey
+.gn,Guinea
+.gw,Guinea-Bissau
+.gy,Guyana
+.ht,Haiti
+.hm,Heard Island and McDonald Islands
+.hn,Honduras
+.hk,Hong Kong
+.hu,Hungary
+.is,Iceland
+.in,India
+.id,Indonesia
+.ir,Iran
+.iq,Iraq
+.ie,Ireland
+.im,Isle of Man
+.il,Israel
+.it,Italy
+.jm,Jamaica
+.jp,Japan
+.je,Jersey
+.jo,Jordan
+.kz,Kazakhstan
+.ke,Kenya
+.ki,Kiribati
+ND,Kosovo
+.kw,Kuwait
+.kg,Kyrgyzstan
+.la,Laos
+.lv,Latvia
+.lb,Lebanon
+.ls,Lesotho
+.lr,Liberia
+.ly,Libya
+.li,Liechtenstein
+.lt,Lithuania
+.lu,Luxembourg
+.mo,Macau
+.mk,North Macedonia
+.mg,Madagascar
+.mw,Malawi
+.my,Malaysia
+.mv,Maldives
+.ml,Mali
+.mt,Malta
+.mh,Marshall Islands
+.mq,Martinique
+.mr,Mauritania
+.mu,Mauritius
+.yt,Mayotte
+.mx,Mexico
+.md,Moldova
+.mc,Monaco
+.mn,Mongolia
+.me,Montenegro
+.ms,Montserrat
+.ma,Morocco
+.mz,Mozambique
+.mm,Myanmar
+.na,Namibia
+.nr,Nauru
+.np,Nepal
+.nl,Netherlands
+.nc,New Caledonia
+.nz,New Zealand
+.ni,Nicaragua
+.ne,Niger
+.ng,Nigeria
+.nu,Niue
+.nf,Norfolk Island
+.nc.tr,North Cyprus
+.kp,North Korea
+.mk,North Macedonia
+.mp,Northern Mariana Islands
+.no,Norway
+.om,Oman
+.pk,Pakistan
+.pw,Palau
+.ps,Palestine
+.pa,Panama
+.pg,Papua New Guinea
+.py,Paraguay
+.pe,Peru
+.ph,Philippines
+.pn,Pitcairn Islands
+.pl,Poland
+.pt,Portugal
+.pr,Puerto Rico
+.qa,Qatar
+.ro,Romania
+.ru,Russia
+.rw,Rwanda
+.re,Réunion Island
+.bq,Saba
+.bl,Saint Barthélemy
+.sh,Saint Helena
+.kn,Saint Kitts and Nevis
+.lc,Saint Lucia
+.mf,Saint Martin
+.pm,Saint-Pierre and Miquelon
+.vc,Saint Vincent and the Grenadines
+.ws,Samoa
+.sm,San Marino
+.st,São Tomé and Príncipe
+.sa,Saudi Arabia
+.sn,Senegal
+.rs,Serbia
+.sc,Seychelles
+.sl,Sierra Leone
+.sg,Singapore
+.bq,Sint Eustatius
+.sx,Sint Maarten
+.sk,Slovakia
+.si,Slovenia
+.sb,Solomon Islands
+.so,Somalia
+.so,Somaliland
+.za,South Africa
+.gs,South Georgia and the South Sandwich Islands
+.kr,South Korea
+.ss,South Sudan
+.es,Spain
+.lk,Sri Lanka
+.sd,Sudan
+.sr,Suriname
+.sj,Svalbard and Jan Mayen Islands
+.sz,Swaziland
+.se,Sweden
+.ch,Switzerland
+.sy,Syria
+.tw,Taiwan
+.tj,Tajikistan
+.tz,Tanzania
+.th,Thailand
+.tg,Togo
+.tk,Tokelau
+.to,Tonga
+.tt,Trinidad & Tobago
+.tn,Tunisia
+.tr,Turkey
+.tm,Turkmenistan
+.tc,Turks and Caicos Islands
+.tv,Tuvalu
+.ug,Uganda
+.ua,Ukraine
+.ae,United Arab Emirates (UAE)
+.uk,United Kingdom (UK)
+.us,United States of America (USA)
+.vi,United States Virgin Islands
+.uy,Uruguay
+.uz,Uzbekistan
+.vu,Vanuatu
+.va,Vatican City
+.ve,Venezuela
+.vn,Vietnam
+.wf,Wallis and Futuna
+.eh,Western Sahara
+.ye,Yemen
+.zm,Zambia
+.zw,Zimbabwe
