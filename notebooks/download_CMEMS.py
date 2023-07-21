@@ -6,14 +6,15 @@ from collections import namedtuple
 
 from shapely.geometry import box, Point
 
-def getIndexFiles(usr,pas,dataset):
+def getIndexFiles(usr,pas,local_dir,dataset):
     #Provides the index files available at the ftp server
     indexes = dataset['index_files'] + [dataset['index_platform']]
     with ftputil.FTPHost(dataset['host'], usr, pas) as ftp_host:  # connect to CMEMS FTP
         for index in indexes:
             remotefile= "/".join(['Core',dataset['product'],dataset['name'],index])
             print('.....Downloading ' + index)
-            localfile = os.path.join(os.getcwd(),'data','index_files',index)
+            #localfile = os.path.join(os.getcwd(),'data','index_files',index)
+            localfile = os.path.join(local_dir,index)
             ftp_host.download(remotefile,localfile)  # remote, local
     print('Ready!')
 
@@ -52,17 +53,18 @@ def spatialOverlap(row, targeted_bbox):
         pass
     return result
 
-def getIndexFilesInfo(usr, pas, dataset, targeted_bbox):
+def getIndexFilesInfo(usr, pas, dataset,local_dir, targeted_bbox):
     # Load and merge in a single entity all the information contained on each file descriptor of a given dataset
     # 1) Loading the index platform info as dataframe
-    path2file = os.path.join(os.path.join(os.path.join(os.getcwd(),'data'), 'index_files'), dataset['index_platform'])
+    #path2file = os.path.join(os.path.join(os.path.join(os.getcwd(),'data'), 'index_files'), dataset['index_platform'])
+    path2file = os.path.join(local_dir, dataset['index_platform'])
     indexPlatform = readIndexFileFromCWD(path2file, None)
     indexPlatform.rename(columns={indexPlatform.columns[0]: "platform_code" }, inplace = True)
     indexPlatform = indexPlatform.drop_duplicates(subset='platform_code', keep="first")
     # 2) Loading the index files info as dataframes
     netcdf_collections = []
     for filename in dataset['index_files']:
-        path2file = os.path.join(os.getcwd(),'data', 'index_files',filename)
+        path2file = os.path.join(local_dir,filename)
         indexFile = readIndexFileFromCWD(path2file, targeted_bbox)
         netcdf_collections.append(indexFile)
     netcdf_collections = pd.concat(netcdf_collections)
