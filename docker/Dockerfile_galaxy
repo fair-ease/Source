@@ -1,0 +1,41 @@
+
+FROM docker-coastal-source
+
+USER root
+
+RUN apt-get update
+RUN apt-get upgrade -y
+
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y apt-utils git make wget build-essential vim python3-pip
+
+RUN pip install --upgrade pip
+
+USER jovyan
+
+RUN pip install datetime
+RUN pip install ftputil
+RUN pip install lxml
+RUN pip install matplotlib
+RUN pip install netCDF4
+RUN pip install numpy
+RUN pip install pykml
+RUN pip install pandas
+RUN pip install seawater
+RUN pip install shapely
+RUN pip install scipy
+RUN pip install unidecode
+
+RUN pip install folium
+RUN pip install altair
+#RUN pip install download_CMEMS
+
+RUN pip install ObsPy
+RUN pip install scikit-learn
+
+
+#RUN mkdir /opt/conda/lib/python3.10/site-packages/SOURCE
+ADD SOURCE /opt/conda/lib/python3.10/site-packages/SOURCE
+
+
+
+
