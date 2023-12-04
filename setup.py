@@ -13,7 +13,9 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type='text/markdown',
     url='https://github.com/pypa/sampleproject',
-    packages=setuptools.find_packages(),
+    packages=setuptools.find_packages(where="SOURCE"),
+    package_dir={"": "SOURCE"},
+    include_package_data=True,
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: Creative Commons :: CC BY SA NC",
