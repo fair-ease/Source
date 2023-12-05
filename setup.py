@@ -5,7 +5,7 @@ with open('README.md', 'r') as fh:
 
 setuptools.setup(
     name='SOURCE',
-    version='1.4.2',
+    version='1.4.3',
     author='Paolo Oliveri',
     data_files=['LICENSE.txt'],
     author_email='paolo.oliveri@ingv.it',
