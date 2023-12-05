@@ -14,8 +14,7 @@ setuptools.setup(
     long_description_content_type='text/markdown',
     url='https://github.com/fair-ease/Source',
     packages=setuptools.find_packages(),
-    include SOURCE/obs_postpro/probes_names.csv
-    include SOURCE/obs_postpro/url_countries.csv
+    package_data={'SOURCE/obs_postpro': ['probes_names.csv', 'url_countries.csv']},    
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: Creative Commons :: CC BY SA NC",
