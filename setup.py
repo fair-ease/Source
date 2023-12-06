@@ -15,7 +15,8 @@ setuptools.setup(
     url='https://github.com/fair-ease/Source',
     packages=setuptools.find_packages(where='SOURCE'),
     package_dir={'SOURCE': 'SOURCE'},
-    package_data={'obs_postpro': ['probes_names.csv', 'url_countries.csv']},
+    package_data={
+        'SOURCE/obs_postpro': ['probes_names.csv', 'url_countries.csv']},
     include_package_data=True
     classifiers=[
         "Programming Language :: Python :: 3",
