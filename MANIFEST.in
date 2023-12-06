@@ -1,2 +1,2 @@
 
-graft SOURCE
+recursive-include SOURCE
