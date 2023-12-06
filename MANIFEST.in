@@ -1,2 +1,2 @@
 
-recursive-include SOURCE *.py *.csv
+recursive-include SOURCE *.py *.csv *.txt

@@ -22,11 +22,3 @@ setuptools.setup(
     ],
     python_requires='>=3.6',
 )
-
-# package_data={'SOURCE': ['obs_postpro/*.csv']},
-
-
-# include SOURCE/obs_postpro/probes_names.csv,
-# include SOURCE/obs_postpro/url_countries.csv,
-#    packages=setuptools.find_packages(where='SOURCE'),
-#    package_dir={'SOURCE': 'SOURCE'},
