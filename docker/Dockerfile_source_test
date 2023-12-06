@@ -28,7 +28,7 @@ RUN pip install altair
 RUN pip install ObsPy
 RUN pip install scikit-learn
 
-RUN git clone https://github.com/fair-ease/Source
+RUN git clone -b PAOLO https://github.com/fair-ease/Source
 WORKDIR /Source
 RUN ["/usr/bin/python3", "setup.py", "install"]
 WORKDIR /
