@@ -17,7 +17,7 @@ setuptools.setup(
     package_dir={'SOURCE': 'SOURCE'},
     package_data={
         'SOURCE/obs_postpro': ['probes_names.csv', 'url_countries.csv']},
-    include_package_data=True
+    include_package_data=True,
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: Creative Commons :: CC BY SA NC",
