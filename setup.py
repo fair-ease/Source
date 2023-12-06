@@ -5,7 +5,7 @@ with open('README.md', 'r') as fh:
 
 setuptools.setup(
     name='SOURCE',
-    version='1.4.3',
+    version='1.0.0',
     author='Paolo Oliveri',
     data_files=['LICENSE.txt'],
     author_email='paolo.oliveri@ingv.it',
@@ -14,7 +14,7 @@ setuptools.setup(
     long_description_content_type='text/markdown',
     url='https://github.com/fair-ease/Source',
     packages=setuptools.find_packages(),
-    package_data={'SOURCE/obs_postpro': ['probes_names.csv', 'url_countries.csv']},    
+    include_package_data=True,
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: Creative Commons :: CC BY SA NC",
