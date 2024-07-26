@@ -5,6 +5,6 @@
 # you need the follow row otherwise comment/delete
 #cd ..
 
-docker run --rm -it --name jupyter_galaxy -v ${PWD}/notebook:/home/jovyan/notebook/ -p 8888:8888 docker_jupyter_galaxy:1.4.2
+docker run --rm -it --name source_jupyter_galaxy -v ${PWD}/notebook:/home/jovyan/notebook/ -p 8888:8888 docker_source_jupyter_galaxy:1.4.2
 
 #

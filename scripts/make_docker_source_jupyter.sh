@@ -5,6 +5,7 @@
 # you need the follow row otherwise comment/delete
 #cd ..
 
-docker build --no-cache -f docker/Dockerfile_galaxy --label docker_jupyter_galaxy --tag docker_jupyter_galaxy:1.4.2 .
+docker build --no-cache -f docker/Dockerfile_source_jupyter --label docker_source_jupyter --tag docker_source_jupyter:1.4.2 .
 
 #
+

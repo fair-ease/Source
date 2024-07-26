@@ -11,33 +11,13 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y apt-utils git make wget bu
 
 RUN pip install --upgrade pip
 
-USER jovyan
+USER root
 
-RUN pip install datetime
-RUN pip install ftputil
-RUN pip install lxml
-RUN pip install matplotlib
-RUN pip install netCDF4
-RUN pip install numpy
-RUN pip install pykml
-RUN pip install pandas
-RUN pip install seawater
-RUN pip install shapely
-RUN pip install scipy
-RUN pip install unidecode
-
-RUN pip install folium
-RUN pip install altair
-#RUN pip install download_CMEMS
-
-RUN pip install ObsPy
-RUN pip install scikit-learn
-
+ADD docker/requirements.txt .
+RUN pip install -r requirements.txt
 
 #ADD SOURCE /usr/local/lib/python3.10/dist-packages/SOURCE
 RUN mkdir /opt/conda/lib/python3.10/site-packages/SOURCE
 ADD SOURCE /opt/conda/lib/python3.10/site-packages/SOURCE
 
-
-
-
+USER jovyan
