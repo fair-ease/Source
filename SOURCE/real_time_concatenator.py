@@ -187,7 +187,8 @@ def real_time_concatenator(in_dir_1=None, in_dir_2=None, work_dir=None, out_dir=
                 in_file_2_presence = False
             out_file = out_field_dir + in_dataset
             if in_file_1_presence and in_file_2_presence:
-                merged_file = work_dir + '/' + in_dataset.replace('.nc', '_merged.nc')
+                #merged_file = work_dir + '/' + in_dataset.replace('.nc', '_merged.nc')
+                merged_file = work_dir + in_dataset.replace('.nc', '_merged.nc')
                 print(' Concatenating dataset ' + in_dataset + '.')
                 pointwise_datasets_concatenator.pointwise_datasets_concatenator(
                     [in_file_1, in_file_2], merged_file, in_fields_standard_name_str=in_fields_standard_name_str,

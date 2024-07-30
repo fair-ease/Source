@@ -3,7 +3,8 @@ import sys
 import os
 import time
 import numpy as np
-import seawater as sw
+#import seawater as sw
+import gsw as sw
 import netCDF4
 from SOURCE import find_variable_name
 

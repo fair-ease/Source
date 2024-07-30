@@ -2,7 +2,8 @@
 import sys
 import os
 import numpy as np
-import seawater as sw
+#import seawater as sw
+import gsw as sw
 import netCDF4
 import time
 import calendar
@@ -182,7 +183,8 @@ def insitu_tac_timeseries_extractor(in_file=None, in_variable_standard_name=None
     try:
         in_longitude_data = in_longitude[good_time_mask]
     except IndexError:
-        if len(in_longitude[...]) == 1:
+        #if len(in_longitude[...]) == 1:
+        if in_longitude[...].size == 1:
             in_longitude_data = np.ones(shape=good_time_mask.shape) * in_longitude[0]
         else:
             time.sleep(sleep_time)
@@ -197,7 +199,8 @@ def insitu_tac_timeseries_extractor(in_file=None, in_variable_standard_name=None
     try:
         in_latitude_data = in_latitude[good_time_mask]
     except IndexError:
-        if len(in_latitude[...]) == 1:
+        #if len(in_latitude[...]) == 1:
+        if in_latitude[...].size == 1:
             in_latitude_data = np.ones(shape=good_time_mask.shape) * in_latitude[0]
         else:
             time.sleep(sleep_time)
@@ -208,13 +211,28 @@ def insitu_tac_timeseries_extractor(in_file=None, in_variable_standard_name=None
     in_latitude_data = in_latitude_data[out_time_indices]
 
     in_depth = False
+    #try:
+    #    in_depth_variable_name = find_variable_name.find_variable_name(in_file, 'standard_name', 'depth', verbose=False)
+    #    in_depth = in_data.variables[in_depth_variable_name]
+    #    in_depth_data = in_depth[good_time_mask]
+    #    in_depth_data = in_depth_data[out_time_indices]
+    #except KeyError:
+    #    pass
+
+   # CFRAT 2024.05.10
+    in_depth_variable_name = find_variable_name.find_variable_name(in_file, 'standard_name', 'depth', verbose=False)
+    in_depth = in_data.variables[in_depth_variable_name]
     try:
-        in_depth_variable_name = find_variable_name.find_variable_name(in_file, 'standard_name', 'depth', verbose=False)
-        in_depth = in_data.variables[in_depth_variable_name]
-        in_depth_data = in_depth[good_time_mask]
-        in_depth_data = in_depth_data[out_time_indices]
-    except KeyError:
-        pass
+     in_depth_data = in_depth[good_time_mask]
+     in_depth_data = in_depth_data[out_time_indices]
+    except IndexError:
+     if in_depth[...].size == 1:
+      in_depth_data = np.ones(shape=good_time_mask.shape) * in_depth[0]
+     if in_depth[...].size == 2:
+      in_depth_data = np.ones(shape=good_time_mask.shape) * in_depth[1]
+     return
+
+    print(in_depth_data)
     if in_depth:
         if np.ma.is_masked(in_depth_data):
             in_depth_data = np.ma.array(np.where(in_depth_data.data == in_depth_data.fill_value, out_fill_value,
@@ -224,15 +242,29 @@ def insitu_tac_timeseries_extractor(in_file=None, in_variable_standard_name=None
             in_depth_data = np.ma.array(in_depth_data, mask=np.zeros(shape=in_depth_data.shape, dtype=bool),
                                         fill_value=out_fill_value, dtype=np.float32)
 
+        #try:
+        #    in_depth_qc = in_data.variables['DEPH_QC']
+        #    in_depth_qc_data = in_depth_qc[good_time_mask]
+        #    in_depth_qc_data = in_depth_qc_data[out_time_indices]
+        #    if np.ma.is_masked(in_depth_qc_data):
+        #        in_depth_qc_data = in_depth_qc_data.data
+        #    in_depth_qc_data = np.where(in_depth_qc_data == 7, 2, in_depth_qc_data)
+        #    in_depth_qc_mask = in_depth_qc_data[...] <= 2
+        #    in_depth_data = np.ma.masked_where(np.invert(in_depth_qc_mask), in_depth_data)
+        #except KeyError:
+        #    in_depth_qc = False
+
+        # CFRAT 2024.05.10
+        in_depth_qc = in_data.variables['DEPH_QC'] 
         try:
-            in_depth_qc = in_data.variables['DEPH_QC']
-            in_depth_qc_data = in_depth_qc[good_time_mask]
-            in_depth_qc_data = in_depth_qc_data[out_time_indices]
-            if np.ma.is_masked(in_depth_qc_data):
-                in_depth_qc_data = in_depth_qc_data.data
-            in_depth_qc_data = np.where(in_depth_qc_data == 7, 2, in_depth_qc_data)
-            in_depth_qc_mask = in_depth_qc_data[...] <= 2
-            in_depth_data = np.ma.masked_where(np.invert(in_depth_qc_mask), in_depth_data)
+         in_depth_qc_data = in_depth_qc[good_time_mask]
+         in_depth_qc_data = in_depth_qc_data[out_time_indices]
+         if np.ma.is_masked(in_depth_qc_data):
+           in_depth_qc_data = in_depth_qc_data.data
+         in_depth_qc_data = np.where(in_depth_qc_data == 7, 2, in_depth_qc_data)
+         in_depth_qc_mask = in_depth_qc_data[...] <= 2
+         in_depth_data = np.ma.masked_where(np.invert(in_depth_qc_mask), in_depth_data)
+         
         except KeyError:
             in_depth_qc = False
     else:

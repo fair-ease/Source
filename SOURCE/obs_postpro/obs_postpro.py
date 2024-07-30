@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
 import sys
 import os
-import shlex
-import shutil
+#import shlex
+#import shutil
 import numpy as np
 import pandas as pd
-import netCDF4
+#import netCDF4
 import time
 import calendar
-from SOURCE.obs_postpro import time_averager, time_series_post_processing, \
-    quality_check_applier, depth_aggregator, depth_calc
-from SOURCE import duplicated_records_remover, records_monotonicity_fixer, time_check, time_calc
+#from SOURCE.obs_postpro import time_averager, time_series_post_processing, \
+#    quality_check_applier, depth_aggregator, depth_calc
+#from SOURCE import duplicated_records_remover, records_monotonicity_fixer, time_check, time_calc
 
 # Global variables
 sleep_time = 0.1  # seconds

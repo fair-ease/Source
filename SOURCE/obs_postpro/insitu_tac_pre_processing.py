@@ -14,6 +14,8 @@ from SOURCE import find_variable_name, pointwise_datasets_concatenator, time_che
 from SOURCE.obs_postpro import insitu_tac_platforms_finder, insitu_tac_timeseries_extractor,\
     data_information_calc, time_from_index, depth_calc, mean_variance_nc_variable, unique_values_nc_variable,\
     quality_check_applier
+import src.areas_to_exclude as ate
+
 
 # Global variables
 sleep_time = 0.1  # seconds
@@ -23,29 +25,35 @@ variance_duplicate_threshold = 1  # degrees
 minimum_records_threshold = 2  # For time step calculation
 minimum_record_days_threshold = 30  # For low time series segments removal, only creation mode
 
-# Biscay Gulf limits
-biscay_gulf_min_lon = -9.25
-biscay_gulf_max_lon = -1.15
-biscay_gulf_min_lat = 43.28
-biscay_gulf_max_lat = 46
 
-# Marmara Sea Limits
-marmara_sea_min_lon = 26.83
-marmara_sea_max_lon = 29.94
-marmara_sea_min_lat = 40.3
-marmara_sea_max_lat = 41.08
+def check_mask_condition(west_boundary,east_boundary,south_boundary,north_boundary):
+  # update maskingg variable
+  for area,coord in ate.to_exclude.items():
+    if (west_boundary > coord["min_lon"]) and (west_boundary < coord["max_lon"]) and \
+        (east_boundary > coord["min_lon"]) and \
+        (south_boundary < coord["max_lat"]) and (north_boundary > coord["min_lat"]) and \
+        med_sea_masking:
+      var_name = 'globals()["' + area.replace(' ','_').lower() + '_masking"]'
+      var_value = True
+      exec(f"{var_name} = {var_value}")
 
-# Black Sea Limits
-black_sea_min_lon = 27.32
-black_sea_max_lon = 41.96
-black_sea_min_lat = 40.91
-black_sea_max_lat = 46.8
 
-# Azov Sea Limits
-azov_sea_min_lon = 34.81
-azov_sea_max_lon = 39.3
-azov_sea_min_lat = 45.28
-azov_sea_max_lat = 47.28
+def check_out_of_area(coords,masking,longitude_mean,latitude_mean):
+  # check if is it out of AOI
+  if ((coords["min_lon"] < longitude_mean < coords["max_lon"]) and \
+      (coords["min_lat"] < latitude_mean < coords["max_lat"])) and \
+      masking:
+    var_name  = 'globals()["out_of_area"]'
+    var_value = True
+    exec(f"{var_name} = {var_value}")
+
+
+for area,coord in ate.to_exclude.items():
+  # create global variables
+  var_name =  area.replace(' ','_').lower() + '_masking'
+  var_value = False
+  exec(f"{var_name} = {var_value}")
+  #print(f"{var_name}: {var_value}")
 
 
 def string_to_bool(string):
@@ -222,30 +230,32 @@ def insitu_tac_pre_processing(in_dir=None, in_fields_standard_name_str=None, wor
     south_boundary = np.float32(region_boundaries_str.split(' ')[2])
     north_boundary = np.float32(region_boundaries_str.split(' ')[3])
 
-    # Biscay Gulf masking condition (mask only if there is no connection between the Atlantic Ocean and the Biscay Gulf)
-    biscay_gulf_masking = False
-    if (west_boundary > biscay_gulf_min_lon) and (west_boundary < biscay_gulf_max_lon) and \
-            (east_boundary > biscay_gulf_min_lon) and \
-            (south_boundary < biscay_gulf_max_lat) and (north_boundary > biscay_gulf_min_lat) and med_sea_masking:
-        biscay_gulf_masking = True
+    check_mask_condition(west_boundary,east_boundary,south_boundary,north_boundary)
 
-    # Marmara Sea Masking condition
-    marmara_sea_masking = False
-    if (west_boundary < marmara_sea_max_lon) and (east_boundary > marmara_sea_min_lon) and \
-            (south_boundary < marmara_sea_max_lat) and (north_boundary > marmara_sea_min_lat) and med_sea_masking:
-        marmara_sea_masking = True
+#    # Biscay Gulf masking condition (mask only if there is no connection between the Atlantic Ocean and the Biscay Gulf)
+#    biscay_gulf_masking = False
+#    if (west_boundary > biscay_gulf_min_lon) and (west_boundary < biscay_gulf_max_lon) and \
+#            (east_boundary > biscay_gulf_min_lon) and \
+#            (south_boundary < biscay_gulf_max_lat) and (north_boundary > biscay_gulf_min_lat) and med_sea_masking:
+#        biscay_gulf_masking = True
 
-    # Black Sea Masking condition
-    black_sea_masking = False
-    if (west_boundary < black_sea_max_lon) and (east_boundary > black_sea_min_lon) and\
-            (south_boundary < black_sea_max_lat) and (north_boundary > marmara_sea_min_lat) and med_sea_masking:
-        black_sea_masking = True
+#    # Marmara Sea Masking condition
+#    marmara_sea_masking = False
+#    if (west_boundary < marmara_sea_max_lon) and (east_boundary > marmara_sea_min_lon) and \
+#            (south_boundary < marmara_sea_max_lat) and (north_boundary > marmara_sea_min_lat) and med_sea_masking:
+#        marmara_sea_masking = True
 
-    # Azov Sea Masking condition
-    azov_sea_masking = False
-    if (west_boundary < azov_sea_max_lon) and (east_boundary > azov_sea_min_lon) and\
-            (south_boundary < azov_sea_max_lat) and (north_boundary > azov_sea_min_lat) and med_sea_masking:
-        azov_sea_masking = True
+#    # Black Sea Masking condition
+#    black_sea_masking = False
+#    if (west_boundary < black_sea_max_lon) and (east_boundary > black_sea_min_lon) and\
+#            (south_boundary < black_sea_max_lat) and (north_boundary > black_sea_min_lat) and med_sea_masking:
+#        black_sea_masking = True
+
+#    # Azov Sea Masking condition
+#    azov_sea_masking = False
+#    if (west_boundary < azov_sea_max_lon) and (east_boundary > azov_sea_min_lon) and\
+#            (south_boundary < azov_sea_max_lat) and (north_boundary > azov_sea_min_lat) and med_sea_masking:
+#        azov_sea_masking = True
 
     if (names_file is None) or (names_file == 'None') or (names_file == ''):
         names_file = os.path.dirname(__file__) + '/probes_names.csv'
@@ -294,7 +304,8 @@ def insitu_tac_pre_processing(in_dir=None, in_fields_standard_name_str=None, wor
     else:
         in_instrument_types_list = None
 
-    file_list = [in_dir + '/' + file for file in os.listdir(in_dir) if file.endswith('.nc')]
+    #file_list = [in_dir + '/' + file for file in os.listdir(in_dir) if file.endswith('.nc')]
+    file_list = [in_dir + file for file in os.listdir(in_dir) if file.endswith('.nc')]
     if not file_list:
         time.sleep(sleep_time)
         print(' Error. No processable files in input directory.', file=sys.stderr)
@@ -526,21 +537,31 @@ def insitu_tac_pre_processing(in_dir=None, in_fields_standard_name_str=None, wor
             np.savetxt(out_processing_file, out_processing_data, fmt='"%s"', delimiter=',', comments='')
             continue
         out_of_area = False
-        if (not west_boundary < longitude_mean < east_boundary) or \
-                (not south_boundary < latitude_mean < north_boundary):
-            out_of_area = True
-        if ((biscay_gulf_min_lon < longitude_mean < biscay_gulf_max_lon) and
-                (biscay_gulf_min_lat < latitude_mean < biscay_gulf_max_lat)) and biscay_gulf_masking:
-            out_of_area = True
-        if ((marmara_sea_min_lon < longitude_mean < marmara_sea_max_lon) and
-                (marmara_sea_min_lat < latitude_mean < marmara_sea_max_lat)) and marmara_sea_masking:
-            out_of_area = True
-        if ((black_sea_min_lon < longitude_mean < black_sea_max_lon) and
-                (black_sea_min_lat < latitude_mean < black_sea_max_lat)) and black_sea_masking:
-            out_of_area = True
-        if ((azov_sea_min_lon < longitude_mean < azov_sea_max_lon) and
-                (azov_sea_min_lat < latitude_mean < azov_sea_max_lat)) and azov_sea_masking:
-            out_of_area = True
+
+        for area,coord in ate.to_exclude.items():
+          var_name =  area.replace(' ','_').lower() + '_masking'
+          #var_value = False
+          #exec(f"{var_name} = {var_value}")
+          #print(f"{var_name}: {var_value}")
+          #print(str(eval(var_name)))
+          check_out_of_area(coord,eval(var_name),longitude_mean,latitude_mean)
+
+
+#        if (not west_boundary < longitude_mean < east_boundary) or \
+#                (not south_boundary < latitude_mean < north_boundary):
+#            out_of_area = True
+#        if ((biscay_gulf_min_lon < longitude_mean < biscay_gulf_max_lon) and
+#                (biscay_gulf_min_lat < latitude_mean < biscay_gulf_max_lat)) and biscay_gulf_masking:
+#            out_of_area = True
+#        if ((marmara_sea_min_lon < longitude_mean < marmara_sea_max_lon) and
+#                (marmara_sea_min_lat < latitude_mean < marmara_sea_max_lat)) and marmara_sea_masking:
+#            out_of_area = True
+#        if ((black_sea_min_lon < longitude_mean < black_sea_max_lon) and
+#                (black_sea_min_lat < latitude_mean < black_sea_max_lat)) and black_sea_masking:
+#            out_of_area = True
+#        if ((azov_sea_min_lon < longitude_mean < azov_sea_max_lon) and
+#                (azov_sea_min_lat < latitude_mean < azov_sea_max_lat)) and azov_sea_masking:
+#            out_of_area = True
         if out_of_area:
             time.sleep(sleep_time)
             print(' Warning:' + print_prefix + ' in situ location is outside the selected area.',
