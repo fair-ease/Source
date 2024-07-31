@@ -130,7 +130,30 @@ There are some different flavours for create the image
 notebook
 --------
 
+You can install ``jupyter notebook`` in the real or virtual environment with the command:
+
+.. code-block:: bash
+  
+  #
+  pip install notebook
+
+  # run jupyter notebook from the root of 'Source'
+  jupyter-lab
   
 
+.. attention::
   
+  Some files for the configuration must be linked or copied inside the folder notebook from the src folder
+  
+  eg: variables.py, datasets.py
+  
+  .. code:: bash
+  
+    # 
+    ln src/variables.py notebooks/variables.py
+    
+    # 
+    cp src/variables.py notebooks/variables.py
+    
+
 
