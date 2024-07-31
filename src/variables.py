@@ -5,11 +5,12 @@ from datetime import timedelta
 
 try:
   from shapely.geometry import box, Point, Polygon
-except:
+except ModuleNotFoundError:
   #if 'shapely' not in sys.modules:
   subprocess.check_call(['pip', 'install', 'shapely'])
   from shapely.geometry import box, Point, Polygon
 
+# the work dir must be in the root of "Source"
 work_dir = os.getcwd()
 if 'notebooks' in work_dir :
   work_dir = os.path.dirname(os.getcwd())
