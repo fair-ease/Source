@@ -11,8 +11,7 @@ WORKDIR /usr/src/app
 RUN apk update
 RUN apk upgrade
 
-#RUN apk add wget vim py3-pip proj proj-util proj-dev build-base py3-pyproject-api geos-dev
-RUN apk add wget vim nano proj proj-util proj-dev build-base py3-pyproject-api geos-dev hdf5-dev netcdf-dev gdal-dev
+RUN apk add --no-cache wget vim nano proj proj-util proj-dev build-base py3-pyproject-api geos-dev hdf5-dev netcdf-dev gdal-dev
 
 RUN pip install --upgrade pip
 
@@ -23,6 +22,8 @@ RUN mkdir /usr/local/lib/python${PYTHON_VERSION}/site-packages/SOURCE
 ADD SOURCE /usr/local/lib/python${PYTHON_VERSION}/site-packages/SOURCE
 
 # alpine
-#RUN apk del proj-dev build-base geos-dev hdf5-dev netcdf-dev gdal-dev
+RUN apk del proj-dev build-base geos-dev hdf5-dev netcdf-dev gdal-dev
 RUN apk -v cache clean
+RUN rm -vrf /var/cache/apk/*
+RUN pip cache purge
 

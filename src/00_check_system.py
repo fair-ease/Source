@@ -22,4 +22,4 @@ print("if you like to install automatically all the module, edit the file src/00
 #checks.modules_install()
 print()
 
-
+print("Check / Installations completed !!")

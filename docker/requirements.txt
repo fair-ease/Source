@@ -7,7 +7,7 @@ copernicusmarine
 cubes
 DateTime
 duckdb
-dumper
+Dumper
 erddap-python
 erddapy
 fitz-utils
@@ -27,7 +27,7 @@ pandas
 pdfkit
 plotly
 pykml
-pyMuPDF
+PyMuPDF
 pyproj
 pydap
 pykml

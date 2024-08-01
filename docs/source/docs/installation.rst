@@ -27,8 +27,11 @@ the repository on  github is at: `github.com/fair-ease/Source <https://github.co
 
 .. code-block:: bash
   
+  #
   git clone https://github.com/fair-ease/Source.git
 
+  #
+  cd Source
   
   
 .. index:: use
