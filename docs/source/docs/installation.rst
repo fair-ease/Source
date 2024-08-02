@@ -138,10 +138,12 @@ You can install ``jupyter notebook`` in the real or virtual environment with the
 .. code-block:: bash
   
   #
-  pip install notebook
+  pip install notebook jupyter
 
   # run jupyter notebook from the root of 'Source'
   jupyter-lab
+  
+  
   
 
 .. attention::
@@ -154,9 +156,11 @@ You can install ``jupyter notebook`` in the real or virtual environment with the
   
     # 
     ln src/variables.py notebooks/variables.py
+    ln src/datasets.py notebooks/datasets.py
     
     # 
     cp src/variables.py notebooks/variables.py
+    cp src/datasets.py notebooks/datasets.py
     
 
 

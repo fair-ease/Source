@@ -33,7 +33,6 @@ def filter_downloads(info,filters):
       string = string + ' & '
       counter = counter + 1
   string = string + ']'
-  #return eval(string).transpose
   return eval(string)
 
 
