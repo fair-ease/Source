@@ -85,6 +85,7 @@ for dataset, data in dts.datasets.items():
   # print("info :",info.head())
 
   # targeted_range = '2024-05-27T00:00:00Z/2024-06-10T00:00:00Z' #set your own!
+  print(targeted_range)
   info['timeOverlap'] = info.apply(
     data_source.copernicus.copernicus_functions.timeOverlap,
     targeted_range=targeted_range,

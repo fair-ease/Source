@@ -45,6 +45,11 @@ downld_bbox_lon_lat_list = [
 ]
 downls_bbox_geom = Polygon(downld_bbox_lon_lat_list)
 
+downld_bbox_edge = [
+  [-6.00,30.00],
+  [37.00,46.00]
+]
+
 # polygon
 downld_poly_lon_lat_list = [
   [-18.50, 30.00],
@@ -58,11 +63,15 @@ downld_poly_lon_lat_list = [
 ]
 downld_poly_geom = Polygon(downld_poly_lon_lat_list)
 
+downld_poly_edge = [
+  [-18.50,30.00],
+  [36.50,46.50]
+]
 #
 downld_check_map = [38.00, 20.00, 4] # map: y (lat), x (lon), zoom level
 
 # numberOfFiles = 200 #we will check just a sample of files not all
-max_num_downld_files = 200
+max_num_downld_files = 1000
 
 # Observation base-data path
 #InDir=parent_dir+'/inputs/OBSERVATION/MO'
@@ -143,7 +152,7 @@ end_date_iso   = end_date.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 # time range
 delta_time = 14
-start_date_iso_back = start_date - timedelta(days = delta_time)
+start_date_iso_back = end_date - timedelta(days = delta_time)
 #targeted_range = str(start_date_iso) + '/' + str(end_date_iso)
 targeted_range = str(start_date_iso_back.strftime("%Y-%m-%dT%H:%M:%SZ")) + '/' + str(end_date_iso)
 

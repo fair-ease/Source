@@ -34,10 +34,19 @@ def jupiter_create_map_aoi(aoi_geom,flag_bbox,map):
   return m
 
 
-def jupiter_create_map_checkdata(aoi_geom,flag_bbox,map):
+def jupiter_create_map_checkdata(aoi_geom,edge,flag_bbox,map,numberOfFiles,subset):
   import folium
   import geopandas as gpd
+  import random
+  print(edge)
   m = folium.Map(location=[map[0], map[1]], zoom_start=map[2])
+  folium.GeoJson(aoi_geom,color='red').add_to(m)
+  folium.LatLngPopup().add_to(m)
+  for platform, files in subset[:numberOfFiles].groupby(['platform_code', 'data_type']):
+    i = len(files)-1
+    m.add_child(folium.Marker([files.iloc[i]['last_latitude_observation'], files.iloc[i]['last_longitude_observation']], popup=files.iloc[i]['platform_code']+' last position' ))
+  #Zooming closer
+  m.fit_bounds(bounds=edge, max_zoom=8)
   return m
 
 
