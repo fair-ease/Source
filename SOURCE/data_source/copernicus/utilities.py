@@ -41,7 +41,13 @@ def download_files_list (subset):
   import numpy as np
   with open('list_files_to_download.txt','w') as list_txt:
     for i in np.arange(0,np.size(subset.file_name)):
-      list_txt.write('history/'+str(os.path.join(os.path.split(subset.file_name.iloc[i])[0].split('/')[-1::][0],os.path.split(subset.file_name.iloc[i])[1]))+'\n')
+      items = subset.file_name.iloc[i].split('/')
+      if len(items) == 5:
+        file_path = items[2] + '/' + items[3] + '/' + items[4] + '\n'
+      elif len(items) == 6:
+        file_path = items[2] + '/' + items[3] + '/' + items[4] + '/' + items[5] + '\n'
+      list_txt.write(file_path)
+      #list_txt.write('history/'+str(os.path.join(os.path.split(subset.file_name.iloc[i])[0].split('/')[-1::][0],os.path.split(subset.file_name.iloc[i])[1]))+'\n')
 
 
 def download_data (dataset,download_dir):

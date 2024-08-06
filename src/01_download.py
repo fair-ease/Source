@@ -101,8 +101,6 @@ for dataset, data in dts.datasets.items():
   # create download list
   data_source.copernicus.utilities.download_files_list(subset)
 
-  ##### TO DO #####
-  ## check if the data are in latest or history
   # download data from copernicusmarine
   data_source.copernicus.utilities.download_data(dataset,download_dir)
 

@@ -99,6 +99,7 @@ def getIndexFilesInfo(dataset, local_dir, targeted_bbox, med_poly):
     for filename in dataset['index_files']:
         path2file = os.path.join(local_dir,filename)
         indexFile = readIndexFileFromCWD(path2file, targeted_bbox, med_poly)
+        indexFile.rename(columns={indexFile.columns[0]: "product_id" }, inplace = True)
         netcdf_collections.append(indexFile)
     netcdf_collections = pd.concat(netcdf_collections)
     #print(netcdf_collections)
