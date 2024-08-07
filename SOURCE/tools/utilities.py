@@ -52,13 +52,46 @@ def jupiter_create_map_checkdata(aoi_geom,edge,flag_bbox,map,numberOfFiles,subse
     )
     return html
 
+  def extract_unique_institution(subset):
+    list = subset['institution'].unique().tolist()
+    return list
+
+  colors = ['beige',
+            'lightblue',
+            'gray',
+            'blue',
+            'darkred',
+            'lightgreen',
+            'purple',
+            'red',
+            'green',
+            'lightred',
+            'darkblue',
+            'darkpurple',
+            'cadetblue',
+            'orange',
+            'pink',
+            'lightgray',
+            'darkgreen'
+            'red',
+            'lightred',
+            'purple',
+          ]
+
+  list_institution = extract_unique_institution(subset)
   m = folium.Map(location=[map[0], map[1]], zoom_start=map[2])
   folium.GeoJson(aoi_geom,color='red').add_to(m)
   folium.LatLngPopup().add_to(m)
   for platform, files in subset[:numberOfFiles].groupby(['platform_code', 'data_type']):
     i = len(files)-1
     popup = folium.Popup(popup_data(files,i), min_width=150, max_width=400)
-    m.add_child(folium.Marker([files.iloc[i]['last_latitude_observation'], files.iloc[i]['last_longitude_observation']], popup = popup ))
+    idx = list_institution.index(files.iloc[i]['institution'])
+    if idx <= len(colors):
+      institution_idx = idx
+    else:
+      institution_idx = 2
+
+    m.add_child(folium.Marker([files.iloc[i]['last_latitude_observation'], files.iloc[i]['last_longitude_observation']], popup = popup, icon=folium.Icon(color=colors[institution_idx]) ))
   #Zooming closer
   #m.fit_bounds(bounds=edge, max_zoom=8)
   return m
