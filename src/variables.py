@@ -145,7 +145,7 @@ start_date = datetime.date(YY_start,MM_start,DD_start)
 end_date   = datetime.date(YY_end,MM_end,DD_end)
 
 start_date_ymd = start_date.strftime("%Y%m%d")
-end_date_ymd   = start_date.strftime("%Y%m%d")
+end_date_ymd   = end_date.strftime("%Y%m%d")
 
 start_date_iso = start_date.strftime("%Y-%m-%dT%H:%M:%SZ")
 end_date_iso   = end_date.strftime("%Y-%m-%dT%H:%M:%SZ")
