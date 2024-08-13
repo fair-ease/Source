@@ -64,8 +64,8 @@ downld_poly_lon_lat_list = [
 downld_poly_geom = Polygon(downld_poly_lon_lat_list)
 
 downld_poly_edge = [
-  [-18.50,30.00],
-  [36.50,46.50]
+  [30.00,-18.50],
+  [46.50,36.50]
 ]
 #
 downld_check_map = [38.00, 20.00, 4] # map: y (lat), x (lon), zoom level
