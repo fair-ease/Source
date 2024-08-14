@@ -70,6 +70,29 @@ downld_poly_edge = [
 #
 downld_check_map = [38.00, 20.00, 4] # map: y (lat), x (lon), zoom level
 
+map_flavours = [
+  "openstreetmap",
+  "cartodb positron",
+  "Stadia.StamenToner",
+  "Stadia.StamenTonerBackground",
+  "Stadia.StamenTonerLite",
+  "Stadia.StamenTerrainBackground",
+  "Esri.WorldImagery",
+  "Esri.WorldTerrain",
+  "Esri.WorldShadedRelief",
+  "Esri.WorldPhysical",
+  "Esri.OceanBasemap",
+  "Esri.WorldGrayCanvas",
+  "CartoDB.Positron",
+  "CartoDB.PositronNoLabels",
+  "CartoDB.DarkMatter",
+  "CartoDB.DarkMatterNoLabels",
+  "CartoDB.Voyager",
+  "CartoDB.VoyagerNoLabels",
+  "GeoportailFrance.orthos",
+  "USGS.USTopo"
+]
+
 # numberOfFiles = 200 #we will check just a sample of files not all
 max_num_downld_files = 1000
 
