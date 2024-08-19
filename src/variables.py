@@ -71,7 +71,7 @@ downld_poly_edge = [
 downld_check_map = [38.00, 20.00, 4] # map: y (lat), x (lon), zoom level
 
 map_flavours = [
-  "openstreetmap",
+  "OpenStreetMap",
   "cartodb positron",
   "Stadia.StamenToner",
   "Stadia.StamenTonerBackground",
