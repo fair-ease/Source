@@ -1,7 +1,8 @@
 
 #FROM bgruening/docker-jupyter-notebook
 #FROM jupyter/datascience-notebook:python-3.10
-FROM jupyter/datascience-notebook:x86_64-python-3.11
+#FROM jupyter/datascience-notebook:x86_64-python-3.11
+FROM quay.io/jupyter/base-notebook
 
 USER root
 
@@ -12,13 +13,16 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y apt-utils git make wget bu
 
 RUN pip install --upgrade pip
 
-USER root
+ADD docker/requirements.txt /home/jovyan/.
 
-ADD docker/requirements.txt .
+RUN chown jovyan:users /home/jovyan/requirements.txt
+
+USER jovyan
+RUN cd ~/
 RUN pip install -r requirements.txt
 
-#ADD SOURCE /usr/local/lib/python3.10/dist-packages/SOURCE
+##ADD SOURCE /usr/local/lib/python3.10/dist-packages/SOURCE
 RUN mkdir /opt/conda/lib/python3.11/site-packages/SOURCE
-ADD SOURCE /opt/conda/lib/python3.11/site-packages/SOURCE
+ADD SOURCE /opt/conda/lib/python3.11/site-packages/SOURCE 
 
 USER jovyan

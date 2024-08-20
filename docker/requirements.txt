@@ -17,6 +17,7 @@ geodatasets
 geopandas
 gsw
 imgkit
+ipywidgets
 lxml
 matplotlib
 matplotlib-inline
