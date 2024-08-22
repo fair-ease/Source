@@ -24,6 +24,7 @@ matplotlib-inline
 netCDF4
 numpy
 obspy
+OWSLib
 pandas
 pdfkit
 plotly
