@@ -17,6 +17,7 @@ geodatasets
 geopandas
 gsw
 imgkit
+ipyleaflet
 ipywidgets
 lxml
 matplotlib
@@ -46,5 +47,6 @@ Unidecode
 urllib3
 wkhtmltopdf
 xarray
+xarray_leaflet
 zarr
 zipp
