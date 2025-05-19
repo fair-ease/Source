@@ -56,7 +56,7 @@ WORKDIR /usr/src/app
 
 RUN pip install --upgrade pip
 RUN pip install --upgrade setuptools
-ADD docker/requirements_jupyter_3-13.txt /usr/src/app
+ADD requirements_jupyter_3-13.txt /usr/src/app
 #ADD docker/constraints.txt /usr/src/app
 #RUN pip install -r requirements_jupyter.txt -c constraints.txt
 RUN pip install -r requirements_jupyter_3-13.txt 
