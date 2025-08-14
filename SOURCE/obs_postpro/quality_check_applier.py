@@ -17,6 +17,13 @@ def string_to_bool(string):
     elif string == 'False':
         return False
 
+def get_dynamic_chunks(shape, max_chunk=10000):
+    """
+    Restituisce una tupla di chunk sizes compatibili con la forma della variabile.
+    Usa al massimo max_chunk elementi per dimensione.
+    """
+    return tuple(min(s, max_chunk) for s in shape)
+
 
 # Functional version
 def quality_check_applier(in_file=None, in_variable_standard_name=None, valid_qc_values=None, out_file=None,
@@ -179,33 +186,71 @@ def quality_check_applier(in_file=None, in_variable_standard_name=None, valid_qc
 
     for dimension_variable_name in out_dimension_variables:
         in_dimension_variable = in_data.variables[dimension_variable_name]
+
+        data = in_dimension_variable
+        shape = data.shape
+        chunksizes =get_dynamic_chunks(shape)
+ 
         if verbose:
             print(' Attaching variable ' + dimension_variable_name)
         if dimension_variable_name == 'time':
             out_dimension_variable = out_data.createVariable(dimension_variable_name, in_dimension_variable.datatype,
                                                              dimensions=in_dimension_variable.dimensions,
-                                                             fill_value=out_fill_value, zlib=True, complevel=1)
+                                                             fill_value=out_fill_value, zlib=True, complevel=1, chunksizes=chunksizes)
         elif 'time' in in_dimension_variable.dimensions:
             out_dimension_variable = out_data.createVariable(dimension_variable_name, in_dimension_variable.datatype,
                                                              dimensions=in_dimension_variable.dimensions,
-                                                             fill_value=out_fill_value, zlib=True, complevel=1)
+                                                             fill_value=out_fill_value, zlib=True, complevel=1, chunksizes=chunksizes)
         else:
             out_dimension_variable = out_data.createVariable(dimension_variable_name, in_dimension_variable.datatype,
                                                              dimensions=in_dimension_variable.dimensions)
-        out_dimension_variable[...] = in_dimension_variable[...]
+        # scrittura dei dati in blocchi (chunking)
+        try:
+         time_chunk_sizes = chunksizes[0]
+        except:
+         time_chunk_sizes = 1 
+
+        try:
+         n_time = shape[0]
+        except:
+         n_time= 1
+ 
+        for i in range(0, n_time, time_chunk_sizes):
+            end = min(i + time_chunk_sizes, n_time)
+            out_dimension_variable[i:end] = in_dimension_variable[i:end]
+
+        #out_dimension_variable[...] = in_dimension_variable[...]
         variable_attributes = [attribute for attribute in in_dimension_variable.ncattrs()
                                if attribute not in '_FillValue']
         out_dimension_variable.setncatts({attribute: in_dimension_variable.getncattr(attribute)
                                          for attribute in variable_attributes})
 
     print(' Attaching variable ' + in_variable_name)
+
+    data = out_variable_data
+    shape = data.shape
+    chunksizes =get_dynamic_chunks(shape)
+
     # Writing output quality checked variable
     out_variable = out_data.createVariable(in_variable_name, in_variable.datatype,
                                            dimensions=in_variable.dimensions,
-                                           fill_value=out_fill_value, zlib=True, complevel=1)
+                                           fill_value=out_fill_value, zlib=True, complevel=1, chunksizes=chunksizes)
     variable_attributes = [attribute for attribute in in_variable.ncattrs() if attribute not in '_FillValue']
     out_variable.setncatts({attribute: in_variable.getncattr(attribute) for attribute in variable_attributes})
-    out_variable[...] = out_variable_data
+
+
+    # scrittura dei dati in blocchi (chunking)
+    try:
+      time_chunk_sizes = chunksizes[0]
+    except:
+      time_chunk_sizes = 1
+
+    n_time=shape[0]
+    for i in range(0, n_time, time_chunk_sizes):
+        end = min(i + time_chunk_sizes, n_time)
+        out_variable[i:end] = out_variable_data[i:end]
+
+    #out_variable[...] = out_variable_data
 
     if verbose:
         print(' Setting global attributes.')

@@ -11,12 +11,14 @@ import time
 import calendar
 from SOURCE import find_variable_name, time_calc
 
+#plotting = True
 plotting = False
 
 if plotting:
     import os
     import matplotlib
     matplotlib.use('TkAgg')
+    #matplotlib.interactive(True)
     import matplotlib.pyplot as plt
 
 
@@ -301,6 +303,7 @@ def time_series_post_processing(in_file=None, in_variable_standard_name=None, up
                                                                            dtype=np.float32)
             for month in range(12):
                 if not np.invert(monthly_mask[month, ...]).all():
+                    
                     monthly_mean_climatology_data[iteration - 1][month, :] = \
                         np.ma.mean(filtered_data[iteration - 1][monthly_mask[month, ...]], axis=0)
                     monthly_std_climatology_data[iteration - 1][month, :] = \
@@ -622,40 +625,44 @@ def time_series_post_processing(in_file=None, in_variable_standard_name=None, up
     if plotting:
         for depth in range(in_depth_data.shape[-1]):
             plt.plot(out_time_series, good_data[-1][..., depth] - np.ma.mean(good_data[-1][..., depth]),
-                     label='Original data')
+                     marker ='.', markersize = 0.5, linestyle='None', label='Original data')
             plt.plot(out_time_series, detrended_variable_data[-1][..., depth], label='Detrended data, slope = ' +
                                                                                      str(np.around(
                                                                                          trend_information_data[-1][
                                                                                              0, 0], decimals=3)) +
                                                                                      ', score = ' + str(
-                np.around(regression_model_score[-1][depth], decimals=3)))
+                np.around(regression_model_score[-1][depth], decimals=3)), marker ='.', markersize = 0.5, linestyle='None')
 
-            plt.plot(out_time_series, trend_line[-1][..., depth], label='Regression trend line')
+            plt.plot(out_time_series, trend_line[-1][..., depth], label='Regression trend line', marker ='.', markersize = 0.5, linestyle='None')
             plt.legend()
             plt.title(os.path.basename(in_file) + ' trend view ' + str(in_depth_data[depth]) + 'm')
             manager = plt.get_current_fig_manager()
             manager.window.wm_geometry("+1920+0")
             manager.resize(1680, 1050)
-            plt.show()
+            plt.savefig(os.path.basename(in_file)+ '_trend_view_'+ str(in_depth_data[depth]) +'.png',dpi=300, bbox_inches='tight')
+            plt.close()
+            #plt.show()
 
             # plt.plot(out_time_series, out_variable_data[:, depth, ...], label='Original data')
-            plt.plot(out_time_series, range_checked_data[:, depth, ...], label='Range check')
-            plt.plot(out_time_series, spike_checked_data[:, depth, ...], label='Spike test')
-            plt.plot(out_time_series, stuck_value_checked_data[:, depth, ...], label='Stuck value test')
+            plt.plot(out_time_series, range_checked_data[:, depth, ...], label='Range check', marker ='.', markersize = 0.5, linestyle='None')
+            plt.plot(out_time_series, spike_checked_data[:, depth, ...], label='Spike test', marker ='.', markersize = 0.5, linestyle='None')
+            plt.plot(out_time_series, stuck_value_checked_data[:, depth, ...], label='Stuck value test', marker ='.', markersize = 0.5, linestyle='None')
             plt.legend()
             plt.title(os.path.basename(in_file) + ' gross check at level ' + str(in_depth_data[depth]) + 'm')
             manager = plt.get_current_fig_manager()
             manager.window.wm_geometry("+1920+0")
             manager.resize(1680, 1050)
-            plt.show()
+            plt.savefig(os.path.basename(in_file)+ '_gross_check_'+str(in_depth_data[depth])+'.png',dpi=300, bbox_inches='tight')
+            plt.close()
+            #plt.show()
 
             # plt.plot(out_time_series, out_variable_data[:, depth, ...], label='Original data')
             for iteration in range(routine_qc_iterations + 1):
                 if iteration == 0:
-                    plt.plot(out_time_series, good_data[iteration][:, depth, ...], label='Gross check')
+                    plt.plot(out_time_series, good_data[iteration][:, depth, ...], label='Gross check', marker ='.', markersize = 0.5, linestyle='None')
                 else:
                     plt.plot(out_time_series, good_data[iteration][:, depth, ...],
-                             label='Statistic QC ' + str(iteration))
+                             label='Statistic QC ' + str(iteration), marker ='.', markersize = 0.5, linestyle='None')
 
                 if iteration == routine_qc_iterations:
                     plt.legend()
@@ -663,14 +670,16 @@ def time_series_post_processing(in_file=None, in_variable_standard_name=None, up
                     manager = plt.get_current_fig_manager()
                     manager.window.wm_geometry("+1920+0")
                     manager.resize(1680, 1050)
-                    plt.show()
+                    plt.savefig(os.path.basename(in_file)+ '_data_analysis_at_level_' + str(in_depth_data[depth])+'.png',dpi=300, bbox_inches='tight')
+                    plt.close()
+                    #plt.show()
 
             for iteration in range(routine_qc_iterations + 1):
                 if iteration == 0:
-                    plt.plot(out_time_series, filtered_data[iteration][:, depth, ...], label='Gross check')
+                    plt.plot(out_time_series, filtered_data[iteration][:, depth, ...], label='Gross check', marker ='.', markersize = 0.5, linestyle='None')
                 else:
                     plt.plot(out_time_series, filtered_data[iteration][:, depth, ...],
-                             label='Statistic QC ' + str(iteration))
+                             label='Statistic QC ' + str(iteration), marker ='.', markersize = 0.5, linestyle='None')
 
                 if iteration == routine_qc_iterations:
                     plt.legend()
@@ -679,15 +688,17 @@ def time_series_post_processing(in_file=None, in_variable_standard_name=None, up
                     manager = plt.get_current_fig_manager()
                     manager.window.wm_geometry('+1920+0')
                     manager.resize(1680, 1050)
-                    plt.show()
+                    plt.savefig(os.path.basename(in_file)+ '_filtered_data_at_level_' + str(in_depth_data[depth])+'.png',dpi=300, bbox_inches='tight')
+                    plt.close()
+                    #plt.show()
 
             for iteration in range(routine_qc_iterations + 1):
                 if iteration == 0:
                     plt.plot(density_samples, filtered_density_data[iteration][:, depth, ...],
-                             label='Gross check')
+                             label='Gross check', marker ='.', markersize = 0.5, linestyle='None')
                 else:
                     plt.plot(density_samples, filtered_density_data[iteration][:, depth, ...],
-                             label='Statistic QC ' + str(iteration))
+                             label='Statistic QC ' + str(iteration), marker ='.', markersize = 0.5, linestyle='None')
 
                 if iteration == routine_qc_iterations:
                     plt.legend()
@@ -696,7 +707,9 @@ def time_series_post_processing(in_file=None, in_variable_standard_name=None, up
                     manager = plt.get_current_fig_manager()
                     manager.window.wm_geometry("+1920+0")
                     manager.resize(1680, 1050)
-                    plt.show()
+                    plt.savefig(os.path.basename(in_file)+ '_filtered_data_density_at_level_' + str(in_depth_data[depth])+'.png',dpi=300, bbox_inches='tight')
+                    plt.close()
+                    #plt.show()
 
     if verbose:
         print(' Creating output dataset.')

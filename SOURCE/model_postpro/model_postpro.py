@@ -8,6 +8,7 @@ import netCDF4
 import pandas as pd
 import time
 import calendar
+import re
 from SOURCE.model_postpro import model_datasets_concatenator, vertical_interpolation
 from SOURCE import ptmp_to_temp
 
@@ -28,7 +29,7 @@ def string_to_bool(string):
 # Functional version
 def model_postpro(in_csv_dir=None, in_dir=None, in_fields_standard_name_str=None, work_dir=None, out_dir=None,
                   grid_observation_distance=None, mesh_mask_file=None, first_date_str=None, last_date_str=None,
-                  concatenate_datasets_switch=True, vertical_interpolation_switch=True, verbose=True):
+                  concatenate_datasets_switch=True, vertical_interpolation_switch=True, verbose=False):
     """
     Script to post process model dataset to insitu devices CSV list.
 
@@ -429,6 +430,7 @@ def model_postpro(in_csv_dir=None, in_dir=None, in_fields_standard_name_str=None
             print(' -------------------------')
     else:
         location_ported_standard_names_list = in_fields_standard_name_list
+        print(f"location_ported_standard_names_list: {location_ported_standard_names_list}")
 
     # Derived temperature field part
     if ('sea_water_potential_temperature' in location_ported_standard_names_list) and \
@@ -481,6 +483,7 @@ def model_postpro(in_csv_dir=None, in_dir=None, in_fields_standard_name_str=None
             derived_temperature_field_file =\
                 derived_temperature_field_dir + os.path.basename(temperature_file)\
                 .replace(temperature_standard_name, out_temperature_standard_name)
+            print(' Converting model potential temperature to in situ temperature.')
             ptmp_to_temp.ptmp_to_temp(temperature_file, salinity_file, derived_temperature_field_file)
             # break  # To post process only the first file in the list
 
@@ -542,16 +545,25 @@ def model_postpro(in_csv_dir=None, in_dir=None, in_fields_standard_name_str=None
                 out_record_type = 'dm'
             elif location_ported_time_step == pd.Timedelta('1 hour'):
                 out_record_type = 'hm'
+            else:
+                out_record_type = 'dm'
             out_record_dir = out_dir + '/' + out_record_type + '/'
             if not os.path.exists(out_record_dir):
                 print(' Creating ' + out_record_dir + ' field folder...')
                 os.makedirs(out_record_dir)
             try:
-                location_ported_probe_index =\
-                    [platform_codes_list.index(platform_code) for platform_code in platform_codes_list
-                     if platform_code in location_ported_file][0]
-            except IndexError:
-                continue
+                filename = os.path.basename(location_ported_file)
+                match = re.match(r'model-data_(.+?)_(sea_water_temperature|sea_water_practical_salinity)\.nc', filename)
+                actual_code = match.group(1)
+                if actual_code in platform_codes_list:
+                    location_ported_probe_index = platform_codes_list.index(actual_code)
+                    print(f"Platform code found: {actual_code} (index {location_ported_probe_index})")
+                else:
+                    print(f"{actual_code} is not in platform_codes_list")
+                    continue
+            except Exception as e:
+                print(f"Errore: {e}")                                 
+                continue 
             probe_platform_code = probes_platform_codes[location_ported_probe_index]
             probe_standard_names = probes_standard_names[location_ported_probe_index]
             probe_depths_values = probes_depths[location_ported_probe_index]

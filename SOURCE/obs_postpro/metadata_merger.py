@@ -109,7 +109,7 @@ def metadata_merger(base_csv_dir=None, update_csv_dir=None, merged_csv_dir=None,
     print(' -------------------------')
 
     print(' Loading base devices information CSV file...')
-    base_devices_file = base_csv_dir + 'devices.csv'
+    base_devices_file = base_csv_dir + '/devices.csv'
     try:
         base_devices_data = open(base_devices_file, 'rb')
     except FileNotFoundError:
@@ -127,7 +127,7 @@ def metadata_merger(base_csv_dir=None, update_csv_dir=None, merged_csv_dir=None,
     base_devices_types = base_devices_data[:, 1]
 
     print(' Loading base organizations information CSV file...')
-    base_organizations_file = base_csv_dir + 'organizations.csv'
+    base_organizations_file = base_csv_dir + '/organizations.csv'
     try:
         base_organizations_data = open(base_organizations_file, 'rb')
     except FileNotFoundError:
@@ -147,7 +147,7 @@ def metadata_merger(base_csv_dir=None, update_csv_dir=None, merged_csv_dir=None,
     base_organizations_links = base_organizations_data[:, 3]
 
     print(' Loading base variables information CSV file...')
-    base_variables_file = base_csv_dir + 'variables.csv'
+    base_variables_file = base_csv_dir + '/variables.csv'
     try:
         base_variables_data = open(base_variables_file, 'rb')
     except FileNotFoundError:
@@ -167,7 +167,7 @@ def metadata_merger(base_csv_dir=None, update_csv_dir=None, merged_csv_dir=None,
     base_variables_units = base_variables_data[:, 3]
 
     print(' Loading base probes information CSV file...')
-    base_probes_file = base_csv_dir + 'probes.csv'
+    base_probes_file = base_csv_dir + '/probes.csv'
     try:
         base_probes_data = open(base_probes_file, 'rb')
     except FileNotFoundError:
@@ -217,7 +217,7 @@ def metadata_merger(base_csv_dir=None, update_csv_dir=None, merged_csv_dir=None,
     base_probes_links = base_probes_data[:, 15]
 
     print(' Loading update devices information CSV file...')
-    update_devices_file = update_csv_dir + 'devices.csv'
+    update_devices_file = update_csv_dir + '/devices.csv'
     try:
         update_devices_data = open(update_devices_file, 'rb')
     except FileNotFoundError:
@@ -235,7 +235,7 @@ def metadata_merger(base_csv_dir=None, update_csv_dir=None, merged_csv_dir=None,
     update_devices_types = update_devices_data[:, 1]
 
     print(' Loading update organizations information CSV file...')
-    update_organizations_file = update_csv_dir + 'organizations.csv'
+    update_organizations_file = update_csv_dir + '/organizations.csv'
     try:
         update_organizations_data = open(update_organizations_file, 'rb')
     except FileNotFoundError:
@@ -255,7 +255,7 @@ def metadata_merger(base_csv_dir=None, update_csv_dir=None, merged_csv_dir=None,
     update_organizations_links = update_organizations_data[:, 3]
 
     print(' Loading update variables information CSV file...')
-    update_variables_file = update_csv_dir + 'variables.csv'
+    update_variables_file = update_csv_dir + '/variables.csv'
     try:
         update_variables_data = open(update_variables_file, 'rb')
     except FileNotFoundError:
@@ -275,7 +275,7 @@ def metadata_merger(base_csv_dir=None, update_csv_dir=None, merged_csv_dir=None,
     update_variables_units = update_variables_data[:, 3]
 
     print(' Loading update probes information CSV file...')
-    update_probes_file = update_csv_dir + 'probes.csv'
+    update_probes_file = update_csv_dir + '/probes.csv'
     try:
         update_probes_data = open(update_probes_file, 'rb')
     except FileNotFoundError:
@@ -350,19 +350,19 @@ def metadata_merger(base_csv_dir=None, update_csv_dir=None, merged_csv_dir=None,
         time.sleep(sleep_time)
         print(' -------------------------')
 
-    merged_devices_file = merged_csv_dir + 'devices.csv'
+    merged_devices_file = merged_csv_dir + '/devices.csv'
     merged_devices_data = np.empty(shape=(1, 2), dtype=object)
     merged_devices_data[0, :] = ['id', 'name']
     print(' Writing merged devices CSV file header...')
     np.savetxt(merged_devices_file, merged_devices_data, fmt='"%s"', delimiter=',', comments='')
 
-    merged_organizations_file = merged_csv_dir + 'organizations.csv'
+    merged_organizations_file = merged_csv_dir + '/organizations.csv'
     merged_organizations_data = np.empty(shape=(1, 4), dtype=object)
     merged_organizations_data[0, :] = ['id', 'name', 'country', 'link']
     print(' Writing merged organizations CSV file header...')
     np.savetxt(merged_organizations_file, merged_organizations_data, fmt='"%s"', delimiter=',', comments='')
 
-    merged_variables_file = merged_csv_dir + 'variables.csv'
+    merged_variables_file = merged_csv_dir + '/variables.csv'
     merged_variables_data = np.empty(shape=(1, 4), dtype=object)
     merged_variables_data[0, :] = ['id', 'standard_name', 'long_name', 'units']
     print(' Writing merged variables CSV file header...')
@@ -376,7 +376,7 @@ def metadata_merger(base_csv_dir=None, update_csv_dir=None, merged_csv_dir=None,
     # print(' Writing merged probes CSV file header...')
     # np.savetxt(merged_probes_file, merged_probes_data, fmt='"%s"', delimiter=',', comments='')
 
-    out_merged_probes_file = merged_csv_dir + 'probes.csv'
+    out_merged_probes_file = merged_csv_dir + '/probes.csv'
     out_merged_probes_data = np.empty(shape=(1, 16), dtype=object)
     out_merged_probes_data[0, :] = ['id', 'platform_code', 'name', 'wmo', 'device_id', 'organization_id',
                                     'variable_ids', 'longitudes', 'latitudes', 'record_starts', 'record_ends',

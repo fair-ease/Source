@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 from pykml.factory import nsmap
 from pykml.factory import KML_ElementMaker as KML

@@ -2,8 +2,7 @@
 import sys
 import os
 import numpy as np
-#import seawater as sw
-import gsw as sw
+import seawater as sw
 import netCDF4
 import time
 import calendar
@@ -45,6 +44,25 @@ def insitu_tac_timeseries_extractor(in_file=None, in_variable_standard_name=None
         print(' 6) (optional) verbosity switch (True or False) (default: True).', file=sys.stderr)
         time.sleep(sleep_time)
         return
+
+    try:
+        first_date = time.strptime(first_date_str, '%Y%m%d')
+    except (IndexError, TypeError, ValueError):
+        try:
+            first_date = time.strptime(first_date_str, '%Y-%m-%d %H:%M:%S')
+        except (IndexError, TypeError, ValueError):
+            first_date_str = None
+            first_date = None
+
+    try:
+        last_date = time.strptime(last_date_str, '%Y%m%d')
+    except (IndexError, TypeError, ValueError):
+        try:
+            last_date = time.strptime(last_date_str, '%Y-%m-%d %H:%M:%S')
+        except (IndexError, TypeError, ValueError):
+            last_date_str = None
+            last_date = None
+
     if verbose:
         print(' Input file = ' + in_file)
         print(' Input variable standard_name = ' + in_variable_standard_name)
@@ -59,16 +77,8 @@ def insitu_tac_timeseries_extractor(in_file=None, in_variable_standard_name=None
         print(' -------------------------')
 
     if first_date_str is not None:
-        try:
-            first_date = time.strptime(first_date_str, '%Y%m%d')
-        except ValueError:
-            first_date = time.strptime(first_date_str, '%Y-%m-%d %H:%M:%S')
         first_date_seconds = calendar.timegm(first_date)
     if last_date_str is not None:
-        try:
-            last_date = time.strptime(last_date_str, '%Y%m%d')
-        except ValueError:
-            last_date = time.strptime(last_date_str, '%Y-%m-%d %H:%M:%S')
         last_date_seconds = calendar.timegm(last_date)
     if verbose:
         print(' Opening input dataset.')
@@ -183,7 +193,6 @@ def insitu_tac_timeseries_extractor(in_file=None, in_variable_standard_name=None
     try:
         in_longitude_data = in_longitude[good_time_mask]
     except IndexError:
-        #if len(in_longitude[...]) == 1:
         if in_longitude[...].size == 1:
             in_longitude_data = np.ones(shape=good_time_mask.shape) * in_longitude[0]
         else:
@@ -199,7 +208,6 @@ def insitu_tac_timeseries_extractor(in_file=None, in_variable_standard_name=None
     try:
         in_latitude_data = in_latitude[good_time_mask]
     except IndexError:
-        #if len(in_latitude[...]) == 1:
         if in_latitude[...].size == 1:
             in_latitude_data = np.ones(shape=good_time_mask.shape) * in_latitude[0]
         else:
@@ -211,28 +219,19 @@ def insitu_tac_timeseries_extractor(in_file=None, in_variable_standard_name=None
     in_latitude_data = in_latitude_data[out_time_indices]
 
     in_depth = False
-    #try:
-    #    in_depth_variable_name = find_variable_name.find_variable_name(in_file, 'standard_name', 'depth', verbose=False)
-    #    in_depth = in_data.variables[in_depth_variable_name]
-    #    in_depth_data = in_depth[good_time_mask]
-    #    in_depth_data = in_depth_data[out_time_indices]
-    #except KeyError:
-    #    pass
-
-   # CFRAT 2024.05.10
-    in_depth_variable_name = find_variable_name.find_variable_name(in_file, 'standard_name', 'depth', verbose=False)
-    in_depth = in_data.variables[in_depth_variable_name]
     try:
-     in_depth_data = in_depth[good_time_mask]
-     in_depth_data = in_depth_data[out_time_indices]
-    except IndexError:
-     if in_depth[...].size == 1:
-      in_depth_data = np.ones(shape=good_time_mask.shape) * in_depth[0]
-     if in_depth[...].size == 2:
-      in_depth_data = np.ones(shape=good_time_mask.shape) * in_depth[1]
-     return
+        in_depth_variable_name = find_variable_name.find_variable_name(in_file, 'standard_name', 'depth', verbose=False)
+        in_depth = in_data.variables[in_depth_variable_name]
+        try:
+            in_depth_data = in_depth[good_time_mask]
+            in_depth_data = in_depth_data[out_time_indices]
+        except IndexError:
+            if len(in_depth.dimensions) == 1:
+                in_depth_data = np.repeat(in_depth[...][np.newaxis, ...], good_time_mask.shape, axis=0)
+                in_depth_data = in_depth_data[out_time_indices]
+    except KeyError:
+        pass
 
-    print(in_depth_data)
     if in_depth:
         if np.ma.is_masked(in_depth_data):
             in_depth_data = np.ma.array(np.where(in_depth_data.data == in_depth_data.fill_value, out_fill_value,
@@ -242,29 +241,15 @@ def insitu_tac_timeseries_extractor(in_file=None, in_variable_standard_name=None
             in_depth_data = np.ma.array(in_depth_data, mask=np.zeros(shape=in_depth_data.shape, dtype=bool),
                                         fill_value=out_fill_value, dtype=np.float32)
 
-        #try:
-        #    in_depth_qc = in_data.variables['DEPH_QC']
-        #    in_depth_qc_data = in_depth_qc[good_time_mask]
-        #    in_depth_qc_data = in_depth_qc_data[out_time_indices]
-        #    if np.ma.is_masked(in_depth_qc_data):
-        #        in_depth_qc_data = in_depth_qc_data.data
-        #    in_depth_qc_data = np.where(in_depth_qc_data == 7, 2, in_depth_qc_data)
-        #    in_depth_qc_mask = in_depth_qc_data[...] <= 2
-        #    in_depth_data = np.ma.masked_where(np.invert(in_depth_qc_mask), in_depth_data)
-        #except KeyError:
-        #    in_depth_qc = False
-
-        # CFRAT 2024.05.10
-        in_depth_qc = in_data.variables['DEPH_QC'] 
         try:
-         in_depth_qc_data = in_depth_qc[good_time_mask]
-         in_depth_qc_data = in_depth_qc_data[out_time_indices]
-         if np.ma.is_masked(in_depth_qc_data):
-           in_depth_qc_data = in_depth_qc_data.data
-         in_depth_qc_data = np.where(in_depth_qc_data == 7, 2, in_depth_qc_data)
-         in_depth_qc_mask = in_depth_qc_data[...] <= 2
-         in_depth_data = np.ma.masked_where(np.invert(in_depth_qc_mask), in_depth_data)
-         
+            in_depth_qc = in_data.variables['DEPH_QC']
+            in_depth_qc_data = in_depth_qc[good_time_mask]
+            in_depth_qc_data = in_depth_qc_data[out_time_indices]
+            if np.ma.is_masked(in_depth_qc_data):
+                in_depth_qc_data = in_depth_qc_data.data
+            in_depth_qc_data = np.where(in_depth_qc_data == 7, 2, in_depth_qc_data)
+            in_depth_qc_mask = in_depth_qc_data[...] <= 2
+            in_depth_data = np.ma.masked_where(np.invert(in_depth_qc_mask), in_depth_data)
         except KeyError:
             in_depth_qc = False
     else:
@@ -275,10 +260,16 @@ def insitu_tac_timeseries_extractor(in_file=None, in_variable_standard_name=None
         in_pres_variable_name = find_variable_name.find_variable_name(in_file, 'standard_name', 'sea_water_pressure',
                                                                       verbose=False)
         in_pres = in_data.variables[in_pres_variable_name]
-        in_pres_data = in_pres[good_time_mask]
-        in_pres_data = in_pres_data[out_time_indices]
+        try:
+            in_pres_data = in_pres[good_time_mask]
+            in_pres_data = in_pres_data[out_time_indices]
+        except IndexError:
+            if len(in_pres.dimensions) == 1:
+                in_pres_data = np.repeat(in_pres[...][np.newaxis, ...], good_time_mask.shape, axis=0)
+                in_pres_data = in_pres_data[out_time_indices]
     except KeyError:
         pass
+
     if in_pres:
         if np.ma.is_masked(in_pres_data):
             in_pres_data = np.ma.array(np.where(in_pres_data.data == in_pres_data.fill_value, out_fill_value,
@@ -425,7 +416,7 @@ def insitu_tac_timeseries_extractor(in_file=None, in_variable_standard_name=None
         except IndexError:
             original_data_depth_slice = np.ma.copy(in_variable_data[not_empty_indices])
             not_filled_variable_data_depth_slice_number = original_data_depth_slice.shape[0] \
-                                                          - np.ma.count_masked(original_data_depth_slice)
+                - np.ma.count_masked(original_data_depth_slice)
             original_qc_data_depth_slice = np.array(in_variable_qc_data[not_empty_indices],
                                                     dtype=in_variable_qc_data.dtype)
             if in_depth:
@@ -476,6 +467,7 @@ def insitu_tac_timeseries_extractor(in_file=None, in_variable_standard_name=None
     out_longitude.units = 'degree_east'
     out_longitude.axis = 'X'
 
+
     out_latitude = out_data.createVariable('lat', datatype=np.float32,
                                            dimensions=('time',), zlib=True, complevel=1)
     out_latitude[...] = out_latitude_data
@@ -484,9 +476,30 @@ def insitu_tac_timeseries_extractor(in_file=None, in_variable_standard_name=None
     out_latitude.units = 'degree_north'
     out_latitude.axis = 'Y'
 
+    def get_dynamic_chunks(shape,max_chunk=10000):
+        """
+        Restituisce una tupla di chunk sizes compatibile con la forma della variabile.
+        Usa al massimo max_chunk elementi per dimensione.
+        """
+        return tuple(min(s,max_chunk) for s in shape)
+
+    data = out_depth_data
+    shape = data.shape
+    chunksizes = get_dynamic_chunks(shape)
+
     out_depth = out_data.createVariable('depth', datatype=np.float32, dimensions=('time', 'depth'),
-                                        fill_value=out_fill_value, zlib=True, complevel=1)
-    out_depth[...] = out_depth_data
+                                        fill_value=out_fill_value, zlib=True, complevel=1, chunksizes=chunksizes)
+
+    # Scrittura dei dati in blocchi (chunking)
+    time_chunk_size = chunksizes[0]
+    n_time=shape[0]
+    for i in range(0, n_time, time_chunk_size):
+        end = min(i + time_chunk_size, n_time)
+        out_depth[i:end] = out_depth_data[i:end] 
+
+    del data, shape, chunksizes, time_chunk_size, n_time
+
+    #out_depth[...] = out_depth_data
     out_depth.positive = 'down'
     out_depth.long_name = 'Instantaneous depth'
     out_depth.standard_name = 'depth'
@@ -508,10 +521,24 @@ def insitu_tac_timeseries_extractor(in_file=None, in_variable_standard_name=None
     # Create new variables and set attributes
     if verbose:
         print(' Creating ' + in_variable_standard_name + ' observed variable.')
+
+    data = original_data
+    shape = data.shape
+    chunksizes = get_dynamic_chunks(shape)
+
     out_variable = out_data.createVariable(in_variable_standard_name, datatype=np.float32,
                                            dimensions=('time', 'depth'),
-                                           fill_value=out_fill_value, zlib=True, complevel=1)
-    out_variable[...] = original_data
+                                           fill_value=out_fill_value, zlib=True, complevel=1, chunksizes=chunksizes)
+    # Scrittura dei dati in blocchi (chunking)
+    time_chunk_size = chunksizes[0]
+    n_time=shape[0]
+    for i in range(0, n_time, time_chunk_size):
+        end = min(i + time_chunk_size, n_time)
+        out_variable[i:end] = original_data[i:end] 
+
+    del data, shape, chunksizes, time_chunk_size, n_time
+
+    #out_variable[...] = original_data
     out_variable_attributes = [element for element in in_variable.ncattrs() if element not in '_FillValue']
     out_variable_attributes = [element for element in out_variable_attributes if element not in 'scale_factor']
     out_variable_attributes = [element for element in out_variable_attributes if element not in 'valid_min']
@@ -522,15 +549,32 @@ def insitu_tac_timeseries_extractor(in_file=None, in_variable_standard_name=None
 
     if verbose:
         print(' Creating ' + in_variable_standard_name + ' observed qc variable.')
+
+    data = original_qc_data
+    shape = data.shape
+    chunksizes = get_dynamic_chunks(shape)
+
     out_variable_qc = out_data.createVariable(in_variable_standard_name + '_qc', datatype=np.float32,
                                               dimensions=('time', 'depth'),
-                                              fill_value=out_fill_value, zlib=True, complevel=1)
-    out_variable_qc[...] = original_qc_data
+                                              fill_value=out_fill_value, zlib=True, complevel=1, chunksizes=chunksizes)
+
+    # Scrittura dei dati in blocchi (chunking)
+    time_chunk_size = chunksizes[0]
+    n_time=shape[0]
+    for i in range(0, n_time, time_chunk_size):
+        end = min(i + time_chunk_size, n_time)
+        out_variable_qc[i:end] = original_qc_data[i:end] 
+
+    del data, shape, chunksizes, time_chunk_size, n_time
+
+
+    #out_variable_qc[...] = original_qc_data
     if in_variable_qc:
         out_variable_qc_attributes = [element for element in in_variable_qc.ncattrs() if element not in '_FillValue']
         out_variable_qc.setncatts({attr: in_variable_qc.getncattr(attr) for attr in out_variable_qc_attributes})
     out_variable_qc.valid_min = np.min(original_qc_data)
     out_variable_qc.valid_max = np.max(original_qc_data)
+
 
     if verbose:
         print(' Setting global attributes.')
@@ -565,6 +609,7 @@ def insitu_tac_timeseries_extractor(in_file=None, in_variable_standard_name=None
     # Close input and output datasets
     in_data.close()
     out_data.close()
+    del out_depth, out_variable
 
 
 # Stand alone version
@@ -581,24 +626,14 @@ if os.path.basename(sys.argv[0]) == os.path.basename(__file__):
         out_file = None
 
     try:
-        time.strptime(sys.argv[4], '%Y%m%d')
         first_date_str = sys.argv[4]
     except (IndexError, ValueError):
-        try:
-            time.strptime(sys.argv[4], '%Y-%m-%d %H:%M:%S')
-            first_date_str = sys.argv[4]
-        except (IndexError, ValueError):
-            first_date_str = None
+        first_date_str = None
 
     try:
-        time.strptime(sys.argv[5], '%Y%m%d')
         last_date_str = sys.argv[5]
     except (IndexError, ValueError):
-        try:
-            time.strptime(sys.argv[5], '%Y-%m-%d %H:%M:%S')
-            last_date_str = sys.argv[5]
-        except (IndexError, ValueError):
-            last_date_str = None
+        last_date_str = None
 
     try:
         verbose = string_to_bool(sys.argv[6])

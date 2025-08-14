@@ -6,6 +6,7 @@ import pandas as pd
 import netCDF4
 import time
 import calendar
+import psutil
 from SOURCE import find_variable_name
 
 # Global variables
@@ -13,7 +14,6 @@ sleep_time = 0.1  # seconds
 out_fill_value = 1.e20
 out_time_reference = '1970-01-01T00:00:00Z'
 out_reference_data = abs(calendar.timegm(time.strptime(out_time_reference, '%Y-%m-%dT%H:%M:%SZ')))
-
 
 def string_to_bool(string):
     if string == 'True':
@@ -213,7 +213,10 @@ def model_datasets_concatenator(in_list=None, in_variable_standard_name=None, in
         try:
             model_reference_data = calendar.timegm(time.strptime(model_time_reference, '%Y-%m-%dT%H:%M:%SZ'))
         except ValueError:
-            model_reference_data = calendar.timegm(time.strptime(model_time_reference, '%Y-%m-%d %H:%M:%S'))
+            try:
+                model_reference_data = calendar.timegm(time.strptime(model_time_reference, '%Y-%m-%d %H:%M:%S'))
+            except ValueError:
+                model_reference_data = calendar.timegm(time.strptime(model_time_reference, '%Y-%m-%d'))
         model_time_data = np.round((model_time_data + model_reference_data) / 600.) * 600
         if first_date_str is not None:
             if time.gmtime(model_time_data[-1]) < first_date:
@@ -236,6 +239,8 @@ def model_datasets_concatenator(in_list=None, in_variable_standard_name=None, in
             model_record_type = 'dm'
         elif model_time_data.shape[0] == 24:
             model_record_type = 'hm'
+        else:
+            model_record_type = 'dm'
         if (saved_record_type is not None) and (model_record_type != saved_record_type):
             time.sleep(sleep_time)
             print(' Error: mixed daily and / or hourly mean model datasets in input directories.', file=sys.stderr)
@@ -245,7 +250,7 @@ def model_datasets_concatenator(in_list=None, in_variable_standard_name=None, in
             return
         saved_record_type = model_record_type
         try:
-            model_longitude = model_data.variables['lon']
+            model_longitude = model_data.variables['longitude']
         except KeyError:
             try:
                 model_longitude = model_data.variables['nav_lon']
@@ -257,7 +262,7 @@ def model_datasets_concatenator(in_list=None, in_variable_standard_name=None, in
                 model_data.close()
                 return
         try:
-            model_latitude = model_data.variables['lat']
+            model_latitude = model_data.variables['latitude']
         except KeyError:
             try:
                 model_latitude = model_data.variables['nav_lat']
@@ -297,8 +302,16 @@ def model_datasets_concatenator(in_list=None, in_variable_standard_name=None, in
                             in_mask_name = 'tmask'
 
         if mesh_mask_file is not None:
+
+         try:
             mask_variable = mesh_mask_data.variables[in_mask_name]
             mask_variable_data = mask_variable[...]
+         except KeyError:
+            mask_variable = mesh_mask_data.variables['mask']
+            mask_variable_data = mask_variable[...]
+
+        if mask_variable_data.ndim < 4:
+          mask_variable_data = mask_variable_data[np.newaxis,:]
         try:
             model_depth_data = model_depth[...]
         except (IndexError, NameError, RuntimeError, ValueError):
@@ -525,8 +538,12 @@ def model_datasets_concatenator(in_list=None, in_variable_standard_name=None, in
                     model_variable_location_cut = np.ma.masked_where(mask_variable_location_cut == 0,
                                                                      model_variable_location_cut)
             if not high_distance_points_switch:
+                #print("not high_distance_points_switch")
+                #mem_before = process.memory_info().rss / (1024 ** 2)  # in MB 
                 aggregated_variable_data[probe_dictionary_index] =\
                     np.ma.append(aggregated_variable_data[probe_dictionary_index], model_variable_location_cut, axis=0)
+                #mem_after = process.memory_info().rss / (1024 ** 2)  # in MB
+                #print(f"Memoria usata: {mem_after - mem_before:.2f} MB in più")
             else:
                 aggregated_variable_data[probe_dictionary_index] =\
                     np.ma.append(aggregated_variable_data[probe_dictionary_index],
