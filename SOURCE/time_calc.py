@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import sys
 import os
 import time
@@ -50,7 +51,7 @@ def time_calc(in_file=None, verbose=True):
     in_time_data = np.sort(in_time_data)
     time_step_array = in_time_data[1:] - in_time_data[: -1]
     (time_step_values, time_step_counts) = np.unique(time_step_array, return_counts=True)
-    if (len(time_step_values) > 0) and (0 in time_step_values):
+    if (len(time_step_values) > 1) and (0 in time_step_values):
         zero_value_index = np.where(time_step_values == 0)[0][0]
         time_step_values = np.delete(time_step_values, zero_value_index)
         time_step_counts = np.delete(time_step_counts, zero_value_index)

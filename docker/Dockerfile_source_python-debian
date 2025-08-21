@@ -1,0 +1,29 @@
+# update if change version
+ARG PYTHON_VERSION="3.12"
+# update if you prefer a different distribution
+ARG LINUX_DIST="slim-bookworm"
+
+FROM python:${PYTHON_VERSION}-${LINUX_DIST}
+ARG PYTHON_VERSION
+
+WORKDIR /usr/src/app 
+
+RUN apt-get update
+RUN apt-get upgrade -y
+
+#RUN DEBIAN_FRONTEND=noninteractive apt-get install -y apt-utils git make wget build-essential vim python3-pip
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y apt-utils wget vim 
+RUN apt-get clean all
+
+RUN pip install --upgrade pip
+
+ADD docker/requirements.txt /usr/src/app
+RUN pip install -r requirements.txt
+
+RUN mkdir /usr/local/lib/python${PYTHON_VERSION}/site-packages/SOURCE
+ADD SOURCE /usr/local/lib/python${PYTHON_VERSION}/site-packages/SOURCE
+
+RUN pip cache purge
+
+CMD [ "python" ]
+

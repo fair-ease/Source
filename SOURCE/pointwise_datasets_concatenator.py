@@ -6,13 +6,14 @@ import numpy as np
 import netCDF4
 import time
 import calendar
+import gc
+import inspect
 from SOURCE import time_calc
 
 
 # Global variables
 sleep_time = 0.1  # seconds
 out_fill_value = 1.e20
-
 
 def string_to_bool(string):
     if string == 'True':
@@ -51,7 +52,9 @@ def pointwise_datasets_concatenator(in_list=None, out_file=None, in_fields_stand
 
         5) Last date in YYYYMMDD or in YYYY-MM-DD HH:MM:SS (OPTIONAL);
 
-        6) Verbosity switch (OPTIONAL)
+        6) Acceptable depth values list (OPTIONAL);
+
+        7) Verbosity switch (OPTIONAL)
 
     Written Nov 9, 2017 by Paolo Oliveri
     """
@@ -63,7 +66,7 @@ def pointwise_datasets_concatenator(in_list=None, out_file=None, in_fields_stand
         print(' -------------------------')
     if in_list is None or out_file is None:
         time.sleep(sleep_time)
-        print(' ERROR: 2 of 6 maximum arguments (4 optionals) not provided.', file=sys.stderr)
+        print(' ERROR: 2 of 7 maximum arguments (5 optionals) not provided.', file=sys.stderr)
         print(' 1) Input datasets list;', file=sys.stderr)
         print(' 2) Output concatenated dataset file name;', file=sys.stderr)
         print(' 3) (optional) Input fields standard_name space separated string'
@@ -72,7 +75,9 @@ def pointwise_datasets_concatenator(in_list=None, out_file=None, in_fields_stand
               ' (default: first recorded date for each device);', file=sys.stderr)
         print(' 5) (optional) Last date to evaluate in YYYYMMDD or YYYY-MM-DD HH:MM:SS format'
               ' (default: last recorded date for each device);', file=sys.stderr)
-        print(' 6) (optional) verbosity switch (True or False) (default: True).', file=sys.stderr)
+        print(' 6) (optional) Depth filter space separated string'
+              ' (default: all depth levels from all datasets will be concatenated)', file=sys.stderr)
+        print(' 7) (optional) verbosity switch (True or False) (default: True).', file=sys.stderr)
         time.sleep(sleep_time)
         return
 
@@ -80,6 +85,7 @@ def pointwise_datasets_concatenator(in_list=None, out_file=None, in_fields_stand
         in_list = in_list.split(' ')
     except AttributeError:
         pass
+
     file_list = [element for element in in_list if element.endswith('.nc')]
     if not file_list:
         file_list = [in_list[0] + '/' + in_file for in_file in os.listdir(in_list[0]) if in_file.endswith('.nc')]
@@ -154,45 +160,63 @@ def pointwise_datasets_concatenator(in_list=None, out_file=None, in_fields_stand
     variables_number = np.empty(shape=0, dtype=int)
     first_file = True
     file_cut_list = list()
+    dimension_variables_list = list()
     for file_number in range(len(file_list)):
         in_file = file_list[file_number]
         in_data = netCDF4.Dataset(in_file, mode='r')
+
+       # print('<><><><><><><><><><><>')
+       # print('FIRST OPENING')
+       # # Show memory usage of all variables in the global scope
+       # all_vars = [(name, sys.getsizeof(obj)) for name, obj in locals().items()]
+       # all_vars.sort(key=lambda x: x[1], reverse=True)
+
+       # for name, size in all_vars:
+       #   print(f"{name}: {size} bytes")
+       # print('<><><><><><><><><><><>')
+
         try:
-            in_data.dimensions['LONGITUDE'].size
+            in_data.dimensions['LONGITUDE']
         except KeyError:
             try:
-                in_data.dimensions['lon'].size
+                in_data.dimensions['lon']
             except KeyError:
                 pass
         try:
-            longitude_variable_name = in_data.variables['LONGITUDE'].name
+            longitude_variable_name = in_data.variables['PRECISE_LONGITUDE'].name
         except KeyError:
             try:
-                longitude_variable_name = in_data.variables['lon'].name
+                longitude_variable_name = in_data.variables['LONGITUDE'].name
             except KeyError:
-                time.sleep(sleep_time)
-                print(' Error: missing longitude variable.', file=sys.stderr)
-                time.sleep(sleep_time)
-                print(' -------------------------')
-                return
+                try:
+                    longitude_variable_name = in_data.variables['lon'].name
+                except KeyError:
+                    time.sleep(sleep_time)
+                    print(' Error: missing longitude variable.', file=sys.stderr)
+                    time.sleep(sleep_time)
+                    print(' -------------------------')
+                    return
         try:
-            in_data.dimensions['LATITUDE'].size
+            in_data.dimensions['LATITUDE']
         except KeyError:
             try:
-                in_data.dimensions['lat'].size
+                in_data.dimensions['lat']
             except KeyError:
                 pass
         try:
-            latitude_variable_name = in_data.variables['LATITUDE'].name
+            latitude_variable_name = in_data.variables['PRECISE_LATITUDE'].name
         except KeyError:
             try:
-                latitude_variable_name = in_data.variables['lat'].name
+                latitude_variable_name = in_data.variables['LATITUDE'].name
             except KeyError:
-                time.sleep(sleep_time)
-                print(' Error: missing latitude variable.', file=sys.stderr)
-                time.sleep(sleep_time)
-                print(' -------------------------')
-                return
+                try:
+                    latitude_variable_name = in_data.variables['lat'].name
+                except KeyError:
+                    time.sleep(sleep_time)
+                    print(' Error: missing latitude variable.', file=sys.stderr)
+                    time.sleep(sleep_time)
+                    print(' -------------------------')
+                    return
         try:
             in_depth_dimension = in_data.dimensions['DEPTH'].size
             depth_dimension_name = 'DEPTH'
@@ -209,7 +233,10 @@ def pointwise_datasets_concatenator(in_list=None, out_file=None, in_fields_stand
             try:
                 depth_variable_name = in_data.variables['depth'].name
             except KeyError:
-                depth_variable_name = ''
+                try: 
+                    depth_variable_name = in_data.variables['DEPTH'].name
+                except KeyError:
+                    depth_variable_name = ''
         try:
             pres_variable_name = in_data.variables['PRES'].name
         except KeyError:
@@ -253,8 +280,11 @@ def pointwise_datasets_concatenator(in_list=None, out_file=None, in_fields_stand
         in_time_reference = in_time_reference[in_time_reference.find('since ') + len('since '):]
         try:
             in_reference_data = abs(calendar.timegm(time.strptime(in_time_reference, '%Y-%m-%dT%H:%M:%SZ')))
-        except ValueError:
-            in_reference_data = abs(calendar.timegm(time.strptime(in_time_reference, '%Y-%m-%d %H:%M:%S')))
+        except (IndexError, TypeError, ValueError):
+            try:
+               in_reference_data = abs(calendar.timegm(time.strptime(in_time_reference, '%Y-%m-%d %H:%M:%S')))
+            except (IndexError, TypeError, ValueError): 
+               in_reference_data = abs(calendar.timegm(time.strptime(in_time_reference, '%Y-%m-%d')))
         in_time_data += - in_reference_data
         start_time = np.min(in_time_data)
         end_time = np.max(in_time_data)
@@ -262,29 +292,80 @@ def pointwise_datasets_concatenator(in_list=None, out_file=None, in_fields_stand
         if first_date_str is not None:
             if end_time < first_date_seconds:
                 in_data.close()
+
+                #print('<><><><><><><><><><><>')
+                #print('FIRST OPENING/1 CLOSING')
+                ## Show memory usage of all variables in the global scope
+                #all_vars = [(name, sys.getsizeof(obj)) for name, obj in locals().items()]
+                #all_vars.sort(key=lambda x: x[1], reverse=True)
+#
+#                for name, size in all_vars:
+#                  print(f"{name}: {size} bytes")
+#                print('<><><><><><><><><><><>')
                 continue
         if last_date_str is not None:
             if start_time > last_date_seconds:
                 in_data.close()
+
+#                print('<><><><><><><><><><><>')
+#                print('FIRST OPENING/2 CLOSING')
+#                # Show memory usage of all variables in the global scope
+#                all_vars = [(name, sys.getsizeof(obj)) for name, obj in locals().items()]
+#                all_vars.sort(key=lambda x: x[1], reverse=True)
+#
+#                for name, size in all_vars:
+#                  print(f"{name}: {size} bytes")
+#                print('<><><><><><><><><><><>')
+
                 continue
+
+        try:
+            time_qc_variable_name = in_data.variables['TIME_QC'].name
+        except KeyError:
+            try:
+                time_qc_variable_name = in_data.variables['time_qc'].name
+            except KeyError:
+                time_qc_variable_name = ''
+        try:
+            depth_qc_variable_name = in_data.variables['DEPH_QC'].name
+        except KeyError:
+            try:
+                depth_qc_variable_name = in_data.variables['depth_qc'].name
+            except KeyError:
+                depth_qc_variable_name = ''
+        try:
+            pres_qc_variable_name = in_data.variables['PRES_QC'].name
+        except KeyError:
+            try:
+                pres_qc_variable_name = in_data.variables['pres_qc'].name
+            except KeyError:
+                pres_qc_variable_name = ''
+        try:
+            position_variable = in_data.variables['POSITIONING_SYSTEM']
+            position_variable_name = position_variable.name[:8]
+        except KeyError:
+            position_variable_name = ''
+        try:
+            position_qc_variable_name = in_data.variables['POSITION_QC'].name
+        except KeyError:
+            position_qc_variable_name = ''
+        try:
+            dc_reference_variable_name = in_data.variables['DC_REFERENCE'].name
+        except KeyError:
+            dc_reference_variable_name = ''
+        try:
+            station_variable_name = in_data.variables['STATION'].name
+        except KeyError:
+            station_variable_name = ''
+        file_dimension_variables_list = \
+            [longitude_variable_name, latitude_variable_name, position_variable_name, position_qc_variable_name,
+             depth_variable_name, depth_qc_variable_name, pres_variable_name, pres_qc_variable_name,
+             time_variable_name, time_qc_variable_name, dc_reference_variable_name, station_variable_name]
+        file_dimension_variables_list = [variable for variable in file_dimension_variables_list if variable != '']
+        dimension_variables_list += \
+            [variable for variable in file_dimension_variables_list if variable not in dimension_variables_list]
+
         if in_fields_standard_name_str is not None:
-            try:
-                position_variable = in_data.variables['POSITIONING_SYSTEM']
-                position_variable_name = position_variable.name[:8]
-            except KeyError:
-                position_variable_name = ''
-            try:
-                position_qc_variable_name = in_data.variables['POSITION_QC'].name
-            except KeyError:
-                position_qc_variable_name = ''
-            try:
-                dc_reference_variable_name = in_data.variables['DC_REFERENCE'].name
-            except KeyError:
-                dc_reference_variable_name = ''
-            dimension_variables_list = \
-                [longitude_variable_name, latitude_variable_name, depth_variable_name, pres_variable_name,
-                 time_variable_name, position_variable_name, dc_reference_variable_name, position_qc_variable_name]
-            dimension_variables_list = [variable for variable in dimension_variables_list if variable != '']
             in_variables_list = list()
             for variable in in_data.variables.keys():
                 try:
@@ -293,7 +374,7 @@ def pointwise_datasets_concatenator(in_list=None, out_file=None, in_fields_stand
                     continue
                 if in_data.variables[variable].standard_name in in_fields_standard_name_list:
                     in_variables_list.append(variable)
-            test_variables = in_variables_list + dimension_variables_list
+            test_variables = in_variables_list + file_dimension_variables_list
         else:
             test_variables = in_data.variables.keys()
         file_cut_list.append(in_file)
@@ -313,12 +394,24 @@ def pointwise_datasets_concatenator(in_list=None, out_file=None, in_fields_stand
             output_variables +=\
                 [variable for variable in in_data.variables.keys() if (variable not in output_variables)
                  and [test_variable for test_variable in test_variables if test_variable in variable]]
+
         time_dimensions = np.append(time_dimensions, in_time_dimension)
         depth_dimensions = np.append(depth_dimensions, in_depth_dimension)
         time_starts = np.append(time_starts, start_time)
         time_ends = np.append(time_ends, end_time)
         variables_number = np.append(variables_number, len(in_data.variables.keys()))
         in_data.close()
+
+        #print('<><><><><><><><><><><>')
+        #print('FIRST CLOSING')
+        ## Show memory usage of all variables in the global scope
+        #all_vars = [(name, sys.getsizeof(obj)) for name, obj in locals().items()]
+        #all_vars.sort(key=lambda x: x[1], reverse=True)
+#
+#        for name, size in all_vars:
+#          print(f"{name}: {size} bytes")
+#        print('<><><><><><><><><><><>')
+
         time_step = time_calc.time_calc(in_file, verbose=False)
         time_steps = np.append(time_steps, time_step)
 
@@ -376,6 +469,17 @@ def pointwise_datasets_concatenator(in_list=None, out_file=None, in_fields_stand
             if verbose:
                 print(' Opening dataset ' + in_file + '.')
             in_data = netCDF4.Dataset(in_file, mode='r')
+
+            #print('<><><><><><><><><><><>')
+            #print('SECOND OPENING')
+            ## Show memory usage of all variables in the global scope
+            #all_vars = [(name, sys.getsizeof(obj)) for name, obj in locals().items()]
+            #all_vars.sort(key=lambda x: x[1], reverse=True)
+#
+#            for name, size in all_vars:
+#              print(f"{name}: {size} bytes")
+#            print('<><><><><><><><><><><>')
+
             in_time = in_data.variables[time_variable_name]
 
             if first_file:
@@ -413,8 +517,11 @@ def pointwise_datasets_concatenator(in_list=None, out_file=None, in_fields_stand
             in_time_reference = in_time_reference[in_time_reference.find('since ') + len('since '):]
             try:
                 in_reference_data = abs(calendar.timegm(time.strptime(in_time_reference, '%Y-%m-%dT%H:%M:%SZ')))
-            except ValueError:
-                in_reference_data = abs(calendar.timegm(time.strptime(in_time_reference, '%Y-%m-%d %H:%M:%S')))
+            except (IndexError, TypeError, ValueError):
+                try: 
+                   in_reference_data = abs(calendar.timegm(time.strptime(in_time_reference, '%Y-%m-%d %H:%M:%S')))
+                except (IndexError, TypeError, ValueError): 
+                   in_reference_data = abs(calendar.timegm(time.strptime(in_time_reference, '%Y-%m-%d')))
             in_time_seconds += - in_reference_data
 
             work_time_seconds[in_index] = in_time_seconds
@@ -424,6 +531,10 @@ def pointwise_datasets_concatenator(in_list=None, out_file=None, in_fields_stand
             work_variable_dimensions[in_index] = {}
             work_variable_fill_value[in_index] = {}
             for variable_name in out_variables:
+                if ('PRECISE_' in variable_name) and (variable_name not in in_data.variables):
+                    continue
+                if ('PRECISE_' not in variable_name) and ('PRECISE_' + variable_name in in_data.variables):
+                    continue
                 variable_presence = True
                 try:
                     in_variable = in_data.variables[variable_name]
@@ -438,29 +549,31 @@ def pointwise_datasets_concatenator(in_list=None, out_file=None, in_fields_stand
                             in_variable_data = np.ma.array(in_variable[...] * in_variable_scale_factor,
                                                            mask=np.isclose(in_variable[...], in_variable_fill_value))
                         except AttributeError:
-                            in_variable_data = np.ma.array(in_variable[...], mask=np.isclose(in_variable[...],
-                                                                                             in_variable_fill_value))
+                            in_variable_data = \
+                                np.ma.array(in_variable[...], mask=np.isclose(in_variable[...],
+                                                                              in_variable_fill_value))
                     except (AttributeError, TypeError):
                         in_variable_data = in_variable[...]
                 except KeyError:
                     variable_presence = False
                     in_variable_data = None
+                if 'PRECISE_' in variable_name:
+                    dict_variable_name = variable_name.replace('PRECISE_', '')
+                else:
+                    dict_variable_name = variable_name
                 if variable_presence:
-                    work_variable_datatypes[in_index][variable_name] = in_variable_data.dtype
-                    work_variable_dimensions[in_index][variable_name] = in_variable.dimensions
+                    work_variable_datatypes[in_index][dict_variable_name] = in_variable_data.dtype
+                    work_variable_dimensions[in_index][dict_variable_name] = in_variable.dimensions
                     try:
-                        work_variable_fill_value[in_index][variable_name] = in_variable._FillValue
+                        work_variable_fill_value[in_index][dict_variable_name] = in_variable._FillValue
                     except AttributeError:
-                        work_variable_fill_value[in_index][variable_name] = None
+                        work_variable_fill_value[in_index][dict_variable_name] = None
                     try:
-                        if not work_variable_dimensions[in_index][variable_name] == (depth_dimension_name,):
-                            time_dimension_condition = in_variable_data.shape[0] == time_dimensions[in_index]
-                        else:
-                            time_dimension_condition = False
+                        time_dimension_condition = in_variable_data.shape[0] == time_dimensions[in_index]
                     except IndexError:
                         time_dimension_condition = False
                     if first_file:
-                        variable_attributes[variable_name] = \
+                        variable_attributes[dict_variable_name] = \
                             {attr: in_variable.getncattr(attr) for attr in in_variable.ncattrs()
                              if attr not in ['_FillValue', 'scale_factor', 'valid_min', 'valid_max']}
 
@@ -471,7 +584,6 @@ def pointwise_datasets_concatenator(in_list=None, out_file=None, in_fields_stand
                         try:
                             first_available_variable = first_available_data.variables[variable_name]
                             first_available_variable_data = first_available_variable[...]
-                            first_available_variable_dimensions = first_available_variable.dimensions
                             break
                         except KeyError:
                             first_available_data.close()
@@ -496,74 +608,87 @@ def pointwise_datasets_concatenator(in_list=None, out_file=None, in_fields_stand
                         in_variable_data = np.ma.masked_all(shape=first_available_variable_data.shape,
                                                             dtype=first_available_variable_data.dtype)
 
-                    work_variable_datatypes[in_index][variable_name] = None
-                    work_variable_dimensions[in_index][variable_name] = None
-                    work_variable_fill_value[in_index][variable_name] = None
-                    if not first_available_variable_dimensions == (depth_dimension_name,):
+                    work_variable_datatypes[in_index][dict_variable_name] = first_available_variable_data.dtype
+                    work_variable_dimensions[in_index][dict_variable_name] = first_available_variable.dimensions
+                    try:
+                        work_variable_fill_value[in_index][dict_variable_name] = first_available_variable._FillValue
+                    except AttributeError:
+                        work_variable_fill_value[in_index][dict_variable_name] = None
+
+                    try:
                         time_dimension_condition = \
                             first_available_variable_data.shape[0] == time_dimensions[first_available_index]
-                    else:
+                    except IndexError:
                         time_dimension_condition = False
                     if first_file:
-                        variable_attributes[variable_name] = \
+                        variable_attributes[dict_variable_name] = \
                             {attr: first_available_variable.getncattr(attr)
                              for attr in first_available_variable.ncattrs()
                              if attr not in ['_FillValue', 'scale_factor', 'valid_min', 'valid_max']}
 
                 if variable_presence:
-                    if time_dimension_condition:
+                    if not in_variable_data.shape:
+                        if variable_name in [latitude_variable_name, longitude_variable_name]:
+                            work_variable_dimensions[in_index][dict_variable_name] = \
+                                (time_dimension_name,) + work_variable_dimensions[in_index][dict_variable_name]
+                            work_variable_data[in_index][dict_variable_name] = \
+                                np.ma.array(np.repeat(in_variable_data[np.newaxis, ...], time_dimensions[in_index],
+                                                      axis=0),
+                                            mask=np.zeros(shape=(time_dimensions[in_index],), dtype=bool))
+                        else:
+                            work_variable_data[in_index][dict_variable_name] = in_variable_data
+                    elif in_variable.dimensions[0] == depth_dimension_name:
+                        work_variable_dimensions[in_index][dict_variable_name] = \
+                            (time_dimension_name,) + work_variable_dimensions[in_index][dict_variable_name]
+                        work_variable_data[in_index][dict_variable_name] = \
+                            np.ma.masked_all(shape=(int(time_dimensions[in_index]), out_depth_dimension,) +
+                                             in_variable_data.shape[1:], dtype=in_variable_data.dtype)
+                        work_variable_data[in_index][
+                            dict_variable_name][:, : depth_dimensions[in_index], ...] = \
+                            np.repeat(in_variable_data[np.newaxis, ...], time_dimensions[in_index], axis=0)
+                    elif time_dimension_condition:
                         if depth_dimension_name in in_variable.dimensions:
-                            work_variable_data[in_index][variable_name] =\
+                            work_variable_data[in_index][dict_variable_name] =\
                                 np.ma.masked_all(shape=(int(time_dimensions[in_index]), out_depth_dimension)
                                                  + in_variable_data.shape[2:],
                                                  dtype=in_variable_data.dtype)
-                            work_variable_data[in_index][variable_name].mask[:, : depth_dimensions[in_index], ...] = \
-                                False
-                            work_variable_data[in_index][variable_name][:, : depth_dimensions[in_index], ...] = \
+                            work_variable_data[in_index][
+                                dict_variable_name].mask[:, : depth_dimensions[in_index], ...] = False
+                            work_variable_data[in_index][dict_variable_name][:, : depth_dimensions[in_index], ...] = \
                                 np.ma.copy(in_variable_data)
                         elif not np.ma.is_masked(in_variable_data):
-                            work_variable_data[in_index][variable_name] = \
+                            work_variable_data[in_index][dict_variable_name] = \
                                 np.ma.array(np.copy(in_variable_data),
                                             mask=np.zeros(shape=in_variable_data.shape, dtype=bool))
                         else:
-                            work_variable_data[in_index][variable_name] = np.ma.copy(in_variable_data)
+                            work_variable_data[in_index][dict_variable_name] = np.ma.copy(in_variable_data)
                     else:
-                        if not in_variable_data.shape:
-                            work_variable_data[in_index][variable_name] = in_variable_data
-                        else:
-                            if depth_dimension_name in in_variable.dimensions:
-                                work_variable_data[in_index][variable_name] = \
-                                    np.empty(shape=(out_depth_dimension,) + in_variable_data.shape[1:],
-                                             dtype=in_variable_data.dtype)
-                                work_variable_data[in_index][variable_name][: depth_dimensions[in_index], ...] = \
-                                    np.copy(in_variable_data)
-                            else:
-                                work_variable_data[in_index][variable_name] = np.ma.copy(in_variable_data)
+                        work_variable_data[in_index][dict_variable_name] = np.ma.copy(in_variable_data)
                 else:
-                    if time_dimension_condition:
+                    if not in_variable_data.shape:
+                        work_variable_data[in_index][dict_variable_name] = np.ma.masked
+                    elif first_available_variable.dimensions[0] == depth_dimension_name:
+                        work_variable_data[in_index][dict_variable_name] = \
+                            np.ma.masked_all(shape=(int(time_dimensions[in_index]), out_depth_dimension) + first_available_variable_data.shape[1:],
+                                             dtype=first_available_variable_data.dtype)
+                        # For datasets without depth, assume that they are surface data only
+                        if variable_name == depth_variable_name:
+                            work_variable_data[in_index][dict_variable_name][:, 0, ...] = 0
+                    elif time_dimension_condition:
                         if depth_dimension_name in first_available_variable.dimensions:
-                            work_variable_data[in_index][variable_name] =\
+                            work_variable_data[in_index][dict_variable_name] =\
                                 np.ma.masked_all(shape=(int(time_dimensions[in_index]), out_depth_dimension)
                                                  + first_available_variable_data.shape[2:],
                                                  dtype=first_available_variable_data.dtype)
                         else:
-                            work_variable_data[in_index][variable_name] = \
+                            work_variable_data[in_index][dict_variable_name] = \
                                 np.ma.masked_all(shape=(int(time_dimensions[in_index]),)
                                                  + first_available_variable_data.shape[1:],
                                                  dtype=first_available_variable_data.dtype)
                     else:
-                        if not in_variable_data.shape:
-                            work_variable_data[in_index][variable_name] = np.ma.masked
-                        else:
-                            if depth_dimension_name in first_available_variable_data.dimensions:
-                                work_variable_data[in_index][variable_name] = \
-                                    np.ma.masked_all(shape=(out_depth_dimension,)
-                                                     + first_available_variable_data.shape[1:],
-                                                     dtype=first_available_variable_data.dtype)
-                            else:
-                                work_variable_data[in_index][variable_name] = \
-                                    np.ma.masked_all(shape=first_available_variable_data.shape,
-                                                     dtype=first_available_variable_data.dtype)
+                        work_variable_data[in_index][dict_variable_name] = \
+                            np.ma.masked_all(shape=first_available_variable_data.shape,
+                                             dtype=first_available_variable_data.dtype)
                     first_available_data.close()
 
             first_file = False
@@ -571,6 +696,17 @@ def pointwise_datasets_concatenator(in_list=None, out_file=None, in_fields_stand
             if verbose:
                 print(' Closing dataset ' + in_file + '.')
             in_data.close()
+
+            #print('<><><><><><><><><><><>')
+            #print('SECOND OPENING/CLOSING')
+            ## Show memory usage of all variables in the global scope
+            #all_vars = [(name, sys.getsizeof(obj)) for name, obj in locals().items()]
+            #all_vars.sort(key=lambda x: x[1], reverse=True)
+#
+#            for name, size in all_vars:
+#              print(f"{name}: {size} bytes")
+#            print('<><><><><><><><><><><>')
+#
         if verbose:
             print(' -------------------------')
         skip_indices = {}
@@ -578,6 +714,13 @@ def pointwise_datasets_concatenator(in_list=None, out_file=None, in_fields_stand
         out_variable_dimensions = {}
         out_variable_datatypes = {}
         out_variable_fill_value = {}
+        longitude_variable_name = longitude_variable_name.replace('PRECISE_', '')
+        latitude_variable_name = latitude_variable_name.replace('PRECISE_', '')
+        for variable_name in [latitude_variable_name, longitude_variable_name]:
+            if 'PRECISE_' + variable_name in out_variables:
+                out_variables.remove('PRECISE_' + variable_name)
+            if variable_name not in out_variables:
+                out_variables.append(variable_name)
         for variable_name in out_variables:
             if verbose:
                 print(' Initalizing concatenated variable ' + variable_name + '.')
@@ -612,11 +755,8 @@ def pointwise_datasets_concatenator(in_list=None, out_file=None, in_fields_stand
             except ValueError:
                 out_variable_fill_value[variable_name] = None
             try:
-                if not work_variable_dimensions[in_index][variable_name] == (depth_dimension_name,):
-                    time_dimension_condition = \
-                        work_variable_data[in_index][variable_name].shape[0] == time_dimensions[in_index]
-                else:
-                    time_dimension_condition = False
+                time_dimension_condition = \
+                    work_variable_data[in_index][variable_name].shape[0] == time_dimensions[in_index]
             except IndexError:
                 time_dimension_condition = False
             if not out_variable_dimensions[variable_name]:
@@ -647,11 +787,13 @@ def pointwise_datasets_concatenator(in_list=None, out_file=None, in_fields_stand
         if verbose:
             print(' -------------------------')
         couples_checked_list = list()
+        masking_variables = \
+            [variable_name for variable_name in out_variables if variable_name not in dimension_variables_list]
         for in_index in range(len(work_variable_data)):
-            if verbose:
-                print(' Masking duplicates for all selected variables in file ' +
-                      os.path.basename(time_sorted_list[in_index]) + '...')
             if time_interceptions[in_index]:
+                if verbose:
+                    print(' Masking duplicates for all selected variables in file ' +
+                          os.path.basename(time_sorted_list[in_index]) + '...')
                 for second_index in time_interceptions[in_index]:
                     print('  With file ' + os.path.basename(time_sorted_list[second_index]) + '.')
                     couple_checking = [min(in_index, second_index), max(in_index, second_index)]
@@ -701,14 +843,10 @@ def pointwise_datasets_concatenator(in_list=None, out_file=None, in_fields_stand
                               (work_variable_datatypes[second_index] == np.int8))) or \
                             (variables_number[in_index] >= variables_number[second_index]) or \
                             (depth_dimensions[in_index] >= depth_dimensions[second_index]):
-                        for variable_name in out_variables:
+                        for variable_name in masking_variables:
                             try:
-                                if not work_variable_dimensions[in_index][variable_name] == (depth_dimension_name,):
-                                    time_dimension_condition = \
-                                        work_variable_data[in_index][variable_name].shape[0] == \
-                                        time_dimensions[in_index]
-                                else:
-                                    time_dimension_condition = False
+                                time_dimension_condition = \
+                                    work_variable_data[in_index][variable_name].shape[0] == time_dimensions[in_index]
                             except IndexError:
                                 time_dimension_condition = False
                             if time_dimension_condition:
@@ -775,7 +913,7 @@ def pointwise_datasets_concatenator(in_list=None, out_file=None, in_fields_stand
                               (work_variable_datatypes[in_index] == np.int8))) or \
                             (variables_number[in_index] < variables_number[second_index]) or \
                             (depth_dimensions[in_index] < depth_dimensions[second_index]):
-                        for variable_name in out_variables:
+                        for variable_name in masking_variables:
                             try:
                                 if not work_variable_dimensions[second_index][variable_name] == (depth_dimension_name,):
                                     time_dimension_condition = \
@@ -845,19 +983,17 @@ def pointwise_datasets_concatenator(in_list=None, out_file=None, in_fields_stand
                 print(' Checking if file ' +
                       os.path.basename(time_sorted_list[in_index]) + ' can then be skipped...')
             skip_indices[in_index] = True
-            for variable_name in out_variables:
+            for variable_name in masking_variables:
                 try:
-                    if not work_variable_dimensions[in_index][variable_name] == (depth_dimension_name,):
-                        time_dimension_condition = \
-                            work_variable_data[in_index][variable_name].shape[0] == time_dimensions[in_index]
-                    else:
-                        time_dimension_condition = False
+                    time_dimension_condition = \
+                        work_variable_data[in_index][variable_name].shape[0] == time_dimensions[in_index]
                 except IndexError:
                     time_dimension_condition = False
-                if time_dimension_condition:
+                if time_dimension_condition and \
+                        (depth_dimension_name in work_variable_dimensions[in_index][variable_name]):
                     if not np.all(work_variable_data[in_index][variable_name].mask):
                         skip_indices[in_index] = False
-                    break
+                        break
                 else:
                     continue
             if skip_indices[in_index] and verbose:
@@ -873,24 +1009,27 @@ def pointwise_datasets_concatenator(in_list=None, out_file=None, in_fields_stand
             for in_index in range(len(work_variable_data)):
                 if not skip_indices[in_index]:
                     try:
-                        if not work_variable_dimensions[in_index][variable_name] == (depth_dimension_name,):
-                            time_dimension_condition = \
-                                work_variable_data[in_index][variable_name].shape[0] == time_dimensions[in_index]
-                        else:
-                            time_dimension_condition = False
+                        time_dimension_condition = \
+                            work_variable_data[in_index][variable_name].shape[0] == time_dimensions[in_index]
                     except IndexError:
                         time_dimension_condition = False
-                    if time_dimension_condition:
+                    if not work_variable_data[in_index][variable_name].shape:
+                        out_variable_data[variable_name] = np.append(out_variable_data[variable_name],
+                                                                     work_variable_data[in_index][variable_name])
+                    elif time_dimension_condition:
                         out_variable_data[variable_name] = np.ma.append(out_variable_data[variable_name],
                                                                         work_variable_data[in_index][variable_name],
                                                                         axis=0)
-                    elif not in_variable_data.shape:
-                        out_variable_data[variable_name] = np.append(out_variable_data[variable_name],
-                                                                     work_variable_data[in_index][variable_name])
                     else:
-                        out_variable_data[variable_name] = \
-                            np.append(out_variable_data[variable_name],
-                                      work_variable_data[in_index][variable_name][..., np.newaxis], axis=-1)
+                        try:
+                            out_variable_data[variable_name] = \
+                                np.append(out_variable_data[variable_name],
+                                          work_variable_data[in_index][variable_name][..., np.newaxis], axis=-1)
+                        except ValueError:
+                            if len(work_variable_data[in_index][variable_name]) > len(out_variable_data[variable_name]):
+                                out_variable_data[variable_name] = work_variable_data[in_index][variable_name]
+                            else:
+                                pass
                     if not concatenated_time:
                         out_time_data = np.ma.append(out_time_data, work_time_data[in_index], axis=0)
             concatenated_time = True
@@ -899,7 +1038,8 @@ def pointwise_datasets_concatenator(in_list=None, out_file=None, in_fields_stand
         for dimension_number in range(len(output_dimensions)):
             dimension_name = output_dimensions[dimension_number]
             dimension_size = output_dimensions_sizes[dimension_number]
-            if (dimension_size == last_time_dimension_size) and (dimension_name not in ['lon', 'lat', 'depth']):
+            if (dimension_size == last_time_dimension_size) and \
+                    (dimension_name not in ['lon', 'lat', depth_dimension_name]):
                 output_dimensions_sizes[dimension_number] = out_time_data.shape[0]
             elif dimension_name == depth_dimension_name:
                 output_dimensions_sizes[dimension_number] = out_depth_dimension
@@ -907,6 +1047,7 @@ def pointwise_datasets_concatenator(in_list=None, out_file=None, in_fields_stand
         if verbose:
             print(' Creating output dataset ' + out_file + '.')
         out_data = netCDF4.Dataset(out_file, mode='w', format='NETCDF4')
+
         for dimension_number in range(len(output_dimensions)):
             dimension_name = output_dimensions[dimension_number]
             dimension_size = output_dimensions_sizes[dimension_number]
@@ -929,13 +1070,33 @@ def pointwise_datasets_concatenator(in_list=None, out_file=None, in_fields_stand
             if verbose:
                 print(' Writing concatenated variable ' + variable_name + '.')
 
-            if out_variable_data[variable_name].shape[0] == out_time_data.shape[0]:
+            time_dimension_condition = out_variable_data[variable_name].shape[0] == out_time_data.shape[0]
+
+            if time_dimension_condition:
+
+                def get_dynamic_chunks(shape, max_chunk=10000):
+                    """
+                    Restituisce una tupla di chunk sizes compatibili con la forma della variabile.
+                    Usa al massimo max_chunk elementi per dimensione.
+                    """
+                    return tuple(min(s, max_chunk) for s in shape)
+
+                data = out_variable_data[variable_name]
+                shape = data.shape
+                chunksizes = get_dynamic_chunks(shape)
+     
                 out_variable[variable_name] = out_data.createVariable(variable_name,
                                                                       datatype=out_variable_datatypes[variable_name],
                                                                       dimensions=out_variable_dimensions[variable_name],
                                                                       fill_value=out_variable_fill_value[variable_name],
-                                                                      zlib=True, complevel=1)
-                out_variable[variable_name][...] = out_variable_data[variable_name]
+                                                                      zlib=True, complevel=1, chunksizes=chunksizes)
+                # Scrittura dei dati in blocchi (chunking)
+                time_chunk_size = chunksizes[0]
+                n_time=shape[0]
+                for i in range(0, n_time, time_chunk_size):
+                  end = min(i + time_chunk_size, n_time)
+                  out_variable[variable_name][i:end] = out_variable_data[variable_name][i:end]  # Scrive a blocchi
+                #out_variable[variable_name][...] = out_variable_data[variable_name]
             else:
                 out_variable[variable_name] = out_data.createVariable(variable_name,
                                                                       datatype=out_variable_datatypes[variable_name],
@@ -943,10 +1104,19 @@ def pointwise_datasets_concatenator(in_list=None, out_file=None, in_fields_stand
                                                                       fill_value=out_variable_fill_value[variable_name])
                 try:
                     out_variable[variable_name][...] = np.ma.mean(out_variable_data[variable_name], axis=-1)
-                except TypeError:
-                    out_variable[variable_name][...] = out_variable_data[variable_name][..., -1]
+                except (TypeError, ValueError):
+                    try:
+                        out_variable[variable_name][...] = out_variable_data[variable_name]
+                    except ValueError:
+                        try:
+                            out_variable[variable_name][...] = out_variable_data[variable_name][..., -1]
+                        except ValueError:
+                            pass
 
             out_variable[variable_name].setncatts(variable_attributes[variable_name])
+            # Forza la raccolta dei garbage per avere lo stato più aggiornato
+            gc.collect()
+
 
         if verbose:
             print(' Setting global attributes.')
@@ -991,7 +1161,7 @@ def pointwise_datasets_concatenator(in_list=None, out_file=None, in_fields_stand
             print(' Closing output dataset ' + out_file + '.')
             print(' -------------------------')
         out_data.close()
-
+        del out_data
 
 # Stand alone version
 if os.path.basename(sys.argv[0]) == os.path.basename(__file__):
@@ -1020,7 +1190,12 @@ if os.path.basename(sys.argv[0]) == os.path.basename(__file__):
         last_date_str = None
 
     try:
-        verbose = string_to_bool(sys.argv[6])
+        depth_filter = string_to_bool(sys.argv[6])
+    except (IndexError, ValueError):
+        depth_filter = True
+
+    try:
+        verbose = string_to_bool(sys.argv[7])
     except (IndexError, ValueError):
         verbose = True
 

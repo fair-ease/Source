@@ -9,8 +9,8 @@ import netCDF4
 import time
 import calendar
 from SOURCE.obs_postpro import time_averager, time_series_post_processing, \
-    quality_check_applier, depth_aggregator, depth_calc
-from SOURCE import duplicated_records_remover, records_monotonicity_fixer, time_check, time_calc
+    quality_check_applier, depth_calc
+from SOURCE import depth_aggregator, duplicated_records_remover, records_monotonicity_fixer, time_check, time_calc
 
 # Global variables
 sleep_time = 0.1  # seconds
@@ -154,7 +154,7 @@ def obs_postpro(in_csv_dir=None, in_dir=None, in_fields_standard_name_str=None, 
             f) rejection amount for each variable by spike test data;
             g) rejection amount for each variable by stuck value test data;
             h) (if routine_qc_iterations is greater or equal than 1)
-                    rejection amount for each variable for each statistic phase..
+                    rejection amount for each variable for each statistic phase.
 
         6) Post processed in situ files in netCDF-4 format, divided by hourly and daily means and probe field,
                 containing:
@@ -163,7 +163,7 @@ def obs_postpro(in_csv_dir=None, in_dir=None, in_fields_standard_name_str=None, 
             b) probe longitude;
             c) field depths;
             d) time counter and boundaries;
-            e) RAW, post processed and averaged fields;
+            e) RAW, post processed and time averaged fields;
             f) global attributes containing original datasets and post process specs.
 
         7) Per-probe and per-field monthly mean climatology averages, standard deviation and filtered density
@@ -209,6 +209,24 @@ def obs_postpro(in_csv_dir=None, in_dir=None, in_fields_standard_name_str=None, 
         print(' 13) (optional) verbosity switch (True or False) (default: True).', file=sys.stderr)
         time.sleep(sleep_time)
         return
+
+    try:
+        first_date = time.strptime(first_date_str, '%Y%m%d')
+    except (IndexError, TypeError, ValueError):
+        try:
+            first_date = time.strptime(first_date_str, '%Y-%m-%d %H:%M:%S')
+        except (IndexError, TypeError, ValueError):
+            first_date_str = None
+            first_date = None
+
+    try:
+        last_date = time.strptime(last_date_str, '%Y%m%d')
+    except (IndexError, TypeError, ValueError):
+        try:
+            last_date = time.strptime(last_date_str, '%Y-%m-%d %H:%M:%S')
+        except (IndexError, TypeError, ValueError):
+            last_date_str = None
+            last_date = None
 
     if (region_boundaries_str is None) or (region_boundaries_str == 'None') or (region_boundaries_str == ''):
         region_boundaries_str = '-180 180 -90 90'
@@ -469,18 +487,6 @@ def obs_postpro(in_csv_dir=None, in_dir=None, in_fields_standard_name_str=None, 
 
         print(' Writing output probes CSV file header...')
         np.savetxt(out_rejection_file, out_rejection_data, fmt='"%s"', delimiter=',', comments='')
-
-    if first_date_str is not None:
-        try:
-            first_date = time.strptime(first_date_str, '%Y%m%d')
-        except ValueError:
-            first_date = time.strptime(first_date_str, '%Y-%m-%d %H:%M:%S')
-
-    if last_date_str is not None:
-        try:
-            last_date = time.strptime(last_date_str, '%Y%m%d')
-        except ValueError:
-            last_date = time.strptime(last_date_str, '%Y-%m-%d %H:%M:%S')
 
     if (first_date_str is not None) and (last_date_str is not None):
         if first_date > last_date:
@@ -806,6 +812,8 @@ def obs_postpro(in_csv_dir=None, in_dir=None, in_fields_standard_name_str=None, 
                     time.sleep(sleep_time)
                     print(print_prefix + ' -------------------------')
                     continue
+
+
                 quality_check_applier.quality_check_applier(post_processed_file, variable_standard_name, "1",
                                                             quality_checked_file, routine_qc_iterations,
                                                             verbose=verbose)

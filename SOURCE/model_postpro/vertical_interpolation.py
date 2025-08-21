@@ -5,6 +5,7 @@ import time
 import numpy as np
 from scipy import interpolate
 import netCDF4
+import traceback
 
 # Global variables
 sleep_time = 0.1  # seconds
@@ -89,11 +90,14 @@ def vertical_interpolation(in_file=None, depth_array_str=None, out_file=None, ve
             try:
                 longitude_name = in_data.variables['nav_lon'].name
             except KeyError:
-                time.sleep(sleep_time)
-                print(' Warning. Input dataset longitude dimension variable not found. Exiting.', file=sys.stderr)
-                time.sleep(sleep_time)
-                print(' -------------------------')
-                return
+                try: 
+                    longitude_name = in_data.variables['longitude'].name
+                except KeyError:
+                    time.sleep(sleep_time)
+                    print(' Warning. Input dataset longitude dimension variable not found. Exiting.', file=sys.stderr)
+                    time.sleep(sleep_time)
+                    print(' -------------------------')
+                    return
 
     try:
         latitude_name = in_data.variables['lat'].name
@@ -104,11 +108,14 @@ def vertical_interpolation(in_file=None, depth_array_str=None, out_file=None, ve
             try:
                 latitude_name = in_data.variables['nav_lat'].name
             except KeyError:
-                time.sleep(sleep_time)
-                print(' Warning. Input dataset latitude dimension variable not found. Exiting.', file=sys.stderr)
-                time.sleep(sleep_time)
-                print(' -------------------------')
-                return
+                try:
+                    latitude_name = in_data.variables['latitude'].name
+                except KeyError:                
+                    time.sleep(sleep_time)
+                    print(' Warning. Input dataset latitude dimension variable not found. Exiting.', file=sys.stderr)
+                    time.sleep(sleep_time)
+                    print(' -------------------------')
+                    return
 
     try:
         depth_name = in_data.variables['depth'].name
@@ -179,7 +186,7 @@ def vertical_interpolation(in_file=None, depth_array_str=None, out_file=None, ve
         for depth_index in range(len(in_depth_data)):
             if len(test_variable.shape) > 1 and (time_name in test_variable.dimensions) and \
                     (depth_name in test_variable.dimensions):
-                if np.any(np.invert(test_variable_data.mask[..., depth_index])) and \
+                if np.any(~test_variable_data.mask[:, depth_index, ...]) and \
                         (last_true_depth_index < depth_index):
                     last_true_depth_index = depth_index
 
@@ -259,13 +266,18 @@ def vertical_interpolation(in_file=None, depth_array_str=None, out_file=None, ve
     # Create new depth variable
     out_depth = out_data.createVariable('depth', in_depth.datatype,
                                         dimensions=('depth',))
-    out_depth[...] = out_depth_data
+    if np.isscalar(out_depth_data) or out_depth_data.shape == ():
+        print(f" out_depth_data is a scalar")
+        out_depth_data = np.array([out_depth_data])
+    else:
+        print(f" out_depth_data is an array")
+        out_depth[...] = out_depth_data
     out_depth.positive = 'down'
     out_depth.long_name = 'Interpolated depth'
     out_depth.standard_name = 'depth'
     out_depth.units = 'm'
     out_depth.axis = 'Z'
-
+    
     if out_depth_data.shape[0] > 1:
         out_depth.valid_min = np.float32(np.min(out_depth_data))
         out_depth.valid_max = np.float32(np.max(out_depth_data))
@@ -307,41 +319,47 @@ def vertical_interpolation(in_file=None, depth_array_str=None, out_file=None, ve
                     print(' Copying data at depth ' +
                           str(np.round(np.float32(in_depth_data[0]), decimals=2)) +
                           'm to output data at depth ' +
-                          str(np.round(np.float32(out_depth_data[depth_index]), decimals=2)) + 'm.')
-                out_variable_data[..., depth_index] = in_variable_data[..., 0]
+                          str(np.round(np.float32(out_depth_data[depth_index]), decimals=2)) + 'm.')               
+                out_variable_data[:, depth_index, :, :] = in_variable_data[:, 0, :, :]
             for depth_index in copy_bottom_indices:
                 if verbose:
                     print('Copying data at depth ' +
                           str(np.round(np.float32(in_depth_data[last_true_depth_index]), decimals=2)) +
                           'm to output data at depth ' +
                           str(np.round(np.float32(out_depth_data[depth_index]), decimals=2)) + 'm.')
-                out_variable_data[..., depth_index] = in_variable_data[..., last_true_depth_index]
+                out_variable_data[:, depth_index, :, :] = in_variable_data[:, last_true_depth_index, :, :]
         else:
             out_variable_data = in_variable_data
 
         # Create output variable
-        if variable_name == 'time_bounds':
-            out_variable = out_data.createVariable(variable_name, in_variable.datatype,
-                                                   dimensions=in_variable.dimensions,
-                                                   zlib=True, complevel=1)
-        elif time_name in in_variable.dimensions:
-            out_variable = out_data.createVariable(variable_name, in_variable.datatype,
-                                                   dimensions=in_variable.dimensions,
-                                                   fill_value=out_fill_value, zlib=True, complevel=1)
-            out_variable.valid_min = np.float32(np.min(out_variable_data))
-            out_variable.valid_max = np.float32(np.max(out_variable_data))
-        elif out_variable_data.ndim >= 2:
-            out_variable = out_data.createVariable(variable_name, in_variable.datatype,
-                                                   dimensions=in_variable.dimensions)
-            out_variable.valid_min = np.float32(np.min(out_variable_data))
-            out_variable.valid_max = np.float32(np.max(out_variable_data))
-        else:
-            out_variable = out_data.createVariable(variable_name, in_variable.datatype,
-                                                   dimensions=in_variable.dimensions)
-        out_variable[...] = out_variable_data
-        out_variable_attributes = [attribute for attribute in in_variable.ncattrs() if attribute not in '_FillValue']
-        out_variable.setncatts({attribute: in_variable.getncattr(attribute) for attribute in out_variable_attributes})
+        try:
+            if variable_name == 'time_bounds':
+                out_variable = out_data.createVariable(variable_name, in_variable.datatype,
+                                                       dimensions=in_variable.dimensions,
+                                                       zlib=True, complevel=1)
+            elif time_name in in_variable.dimensions:
+                out_variable = out_data.createVariable(variable_name, in_variable.datatype,
+                                                       dimensions=in_variable.dimensions,
+                                                       fill_value=out_fill_value, zlib=True, complevel=1)
+                out_variable.valid_min = np.float32(np.min(out_variable_data))
+                out_variable.valid_max = np.float32(np.max(out_variable_data))
+            elif out_variable_data.ndim >= 2:
+                out_variable = out_data.createVariable(variable_name, in_variable.datatype,
+                                                       dimensions=in_variable.dimensions)
+                out_variable.valid_min = np.float32(np.min(out_variable_data))
+                out_variable.valid_max = np.float32(np.max(out_variable_data))
+            else:
+                out_variable = out_data.createVariable(variable_name, in_variable.datatype,
+                                                       dimensions=in_variable.dimensions)
+            out_variable[...] = out_variable_data
+            out_variable_attributes = [attribute for attribute in in_variable.ncattrs() if attribute not in '_FillValue']
+            out_variable.setncatts({attribute: in_variable.getncattr(attribute) for attribute in out_variable_attributes})
 
+        except Exception as e:
+            if verbose:
+                print(f"Error with variable '{variable_name}': {e}")
+                traceback.print_exc()
+    
     if verbose:
         print(' Setting global attributes.')
     # Set global attributes
@@ -350,9 +368,9 @@ def vertical_interpolation(in_file=None, depth_array_str=None, out_file=None, ve
     out_data.institution = 'Istituto Nazionale di Geofisica e Vulcanologia - Bologna, Italy'
     out_data.Conventions = 'CF-1.6'
     out_data.field_type = 'Vertical interpolated model data'
-    out_data.history = \
-        time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()) + \
-        ' : Computed vertical interpolation\n' + in_data.history
+    #out_data.history = \
+    #    time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()) + \
+    #    ' : Computed vertical interpolation\n' + in_data.history
 
     if verbose:
         print(' Closing datasets.')

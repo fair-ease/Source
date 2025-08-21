@@ -1,0 +1,42 @@
+
+FROM quay.io/jupyter/base-notebook AS build
+
+ENV PY_MAJOR=3.11
+
+USER root
+
+RUN apt-get update && apt-get upgrade -y
+
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    apt-utils \
+    git \
+    make \
+    wget \
+    build-essential \
+    vim \
+    python3-pip
+
+RUN pip install --upgrade pip
+
+ADD docker/requirements.txt /home/jovyan/.
+RUN chown jovyan:users /home/jovyan/requirements.txt
+
+USER jovyan
+RUN cd ~/
+RUN pip install -r requirements.txt
+
+RUN mkdir /opt/conda/lib/python$PY_MAJOR/site-packages/SOURCE
+ADD SOURCE /opt/conda/lib/pythonPY_MAJOR/site-packages/SOURCE
+
+RUN pip cache purge
+
+# -----
+
+FROM quay.io/jupyter/base-notebook
+USER root
+
+RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
+
+COPY --from=build /opt/conda/ /opt/conda/
+
+USER jovyan

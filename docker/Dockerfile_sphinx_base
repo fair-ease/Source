@@ -1,0 +1,13 @@
+
+FROM sphinxdoc/sphinx:latest
+
+RUN apt-get update
+RUN apt-get upgrade -y
+
+#RUN DEBIAN_FRONTEND=noninteractive apt-get install -y python3-pip libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz-subset0
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y weasyprint
+
+WORKDIR /docs
+ADD /docker/requirements_sphinx.txt /docs
+RUN pip3 install -r requirements_sphinx.txt
+

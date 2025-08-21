@@ -201,17 +201,23 @@ def insitu_tac_pre_processing(in_dir=None, in_fields_standard_name_str=None, wor
         print(' -------------------------')
         return
 
-    if first_date_str is not None:
+    try:
+        first_date = time.strptime(first_date_str, '%Y%m%d')
+    except (IndexError, TypeError, ValueError):
         try:
-            first_date = time.strptime(first_date_str, '%Y%m%d')
-        except ValueError:
             first_date = time.strptime(first_date_str, '%Y-%m-%d %H:%M:%S')
+        except (IndexError, TypeError, ValueError):
+            first_date_str = None
+            first_date = None
 
-    if last_date_str is not None:
+    try:
+        last_date = time.strptime(last_date_str, '%Y%m%d')
+    except (IndexError, TypeError, ValueError):
         try:
-            last_date = time.strptime(last_date_str, '%Y%m%d')
-        except ValueError:
             last_date = time.strptime(last_date_str, '%Y-%m-%d %H:%M:%S')
+        except (IndexError, TypeError, ValueError):
+             last_date_str = None
+             last_date = None
 
     if (region_boundaries_str is None) or (region_boundaries_str == 'None') or (region_boundaries_str == ''):
         region_boundaries_str = '-180 180 -90 90'
@@ -388,18 +394,6 @@ def insitu_tac_pre_processing(in_dir=None, in_fields_standard_name_str=None, wor
     print(' Writing processing information CSV file header...')
     np.savetxt(out_processing_file, out_processing_data, fmt='"%s"', delimiter=',', comments='')
 
-    if first_date_str is not None:
-        try:
-            first_date = time.strptime(first_date_str, '%Y%m%d')
-        except ValueError:
-            first_date = time.strptime(first_date_str, '%Y-%m-%d %H:%M:%S')
-
-    if last_date_str is not None:
-        try:
-            last_date = time.strptime(last_date_str, '%Y%m%d')
-        except ValueError:
-            last_date = time.strptime(last_date_str, '%Y-%m-%d %H:%M:%S')
-
     if (first_date_str is not None) and (last_date_str is not None):
         if first_date > last_date:
             time.sleep(sleep_time)
@@ -452,7 +446,7 @@ def insitu_tac_pre_processing(in_dir=None, in_fields_standard_name_str=None, wor
             organization_link = ''
             organization_country = ''
         try:
-            platform_name = in_data.platform_name
+            platform_name = unidecode.unidecode(in_data.platform_name.replace(',', ''))
         except AttributeError:
             platform_name = ''
         if platform_name != '':

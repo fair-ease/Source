@@ -76,12 +76,15 @@ def ptmp_to_temp(ptmp_file=None, salt_file=None, temp_file=None, verbose=True):
             try:
                 ptmp_longitude = ptmp_data.variables['nav_lon']
             except KeyError:
-                time.sleep(sleep_time)
-                print(' Warning. Potential temperature dataset longitude dimension variable not found. Exiting.',
-                      file=sys.stderr)
-                time.sleep(sleep_time)
-                print(' -------------------------')
-                return
+                try:
+                    ptmp_longitude = ptmp_data.variables['longitude']
+                except KeyError:                
+                    time.sleep(sleep_time)
+                    print(' Warning. Potential temperature dataset longitude dimension variable not found. Exiting.',
+                          file=sys.stderr)
+                    time.sleep(sleep_time)
+                    print(' -------------------------')
+                    return
     ptmp_longitude_data = ptmp_longitude[...]
 
     try:
@@ -93,12 +96,15 @@ def ptmp_to_temp(ptmp_file=None, salt_file=None, temp_file=None, verbose=True):
             try:
                 ptmp_latitude = ptmp_data.variables['nav_lat']
             except KeyError:
-                time.sleep(sleep_time)
-                print(' Warning. Potential temperature dataset latitude dimension variable not found. Exiting.',
-                      file=sys.stderr)
-                time.sleep(sleep_time)
-                print(' -------------------------')
-                return
+                try:
+                    ptmp_latitude = ptmp_data.variables['latitude']
+                except KeyError:
+                    time.sleep(sleep_time)
+                    print(' Warning. Potential temperature dataset latitude dimension variable not found. Exiting.',
+                          file=sys.stderr)
+                    time.sleep(sleep_time)
+                    print(' -------------------------')
+                    return
     ptmp_latitude_data = ptmp_latitude[...]
 
     try:
@@ -183,12 +189,15 @@ def ptmp_to_temp(ptmp_file=None, salt_file=None, temp_file=None, verbose=True):
             try:
                 salt_longitude = salt_data.variables['nav_lon']
             except KeyError:
-                time.sleep(sleep_time)
-                print(' Warning. Salinity dataset longitude dimension variable not found. Exiting.',
-                      file=sys.stderr)
-                time.sleep(sleep_time)
-                print(' -------------------------')
-                return
+                try:
+                    salt_longitude = salt_data.variables['longitude']
+                except KeyError:                 
+                    time.sleep(sleep_time)
+                    print(' Warning. Salinity dataset longitude dimension variable not found. Exiting.',
+                          file=sys.stderr)
+                    time.sleep(sleep_time)
+                    print(' -------------------------')
+                    return
     salt_longitude_data = salt_longitude[...]
 
     try:
@@ -200,12 +209,15 @@ def ptmp_to_temp(ptmp_file=None, salt_file=None, temp_file=None, verbose=True):
             try:
                 salt_latitude = salt_data.variables['nav_lat']
             except KeyError:
-                time.sleep(sleep_time)
-                print(' Warning. Salinity dataset latitude dimension variable not found. Exiting.',
-                      file=sys.stderr)
-                time.sleep(sleep_time)
-                print(' -------------------------')
-                return
+                try:
+                    salt_latitude = salt_data.variables['latitude']
+                except KeyError:                  
+                    time.sleep(sleep_time)
+                    print(' Warning. Salinity dataset latitude dimension variable not found. Exiting.',
+                          file=sys.stderr)
+                    time.sleep(sleep_time)
+                    print(' -------------------------')
+                    return
     salt_latitude_data = salt_latitude[...]
 
     try:

@@ -26,27 +26,27 @@ def string_to_bool(string):
 
 
 def round_down(datetime_variable, resolution):
-    if resolution == 'AS':
+    if resolution == 'YS':
         return datetime.datetime(year=datetime_variable.year, month=1, day=1)
     elif resolution == 'MS':
         return datetime.datetime(year=datetime_variable.year,
                                  month=datetime_variable.month, day=1)
-    elif resolution == 'D':
+    elif resolution == 'd':
         return datetime.datetime(year=datetime_variable.year,
                                  month=datetime_variable.month,
                                  day=datetime_variable.day)
-    elif resolution == 'H':
+    elif resolution == 'h':
         return datetime.datetime(year=datetime_variable.year,
                                  month=datetime_variable.month,
                                  day=datetime_variable.day,
                                  hour=datetime_variable.hour)
-    elif resolution == 'T':
+    elif resolution == 't':
         return datetime.datetime(year=datetime_variable.year,
                                  month=datetime_variable.month,
                                  day=datetime_variable.day,
                                  hour=datetime_variable.hour,
                                  minute=datetime_variable.minute)
-    elif resolution == 'S':
+    elif resolution == 's':
         return datetime.datetime(year=datetime_variable.year,
                                  month=datetime_variable.month,
                                  day=datetime_variable.day,
@@ -56,17 +56,17 @@ def round_down(datetime_variable, resolution):
 
 
 def round_up(datetime_variable, resolution):
-    if resolution == 'AS':
+    if resolution == 'YS':
         return round_down(datetime_variable, resolution) + dateutil.relativedelta.relativedelta(years=1)
     if resolution == 'MS':
         return round_down(datetime_variable, resolution) + dateutil.relativedelta.relativedelta(months=1)
-    elif resolution == 'D':
+    elif resolution == 'd':
         return round_down(datetime_variable, resolution) + datetime.timedelta(days=1)
-    elif resolution == 'H':
+    elif resolution == 'h':
         return round_down(datetime_variable, resolution) + datetime.timedelta(hours=1)
-    elif resolution == 'T':
+    elif resolution == 't':
         return round_down(datetime_variable, resolution) + datetime.timedelta(minutes=1)
-    elif resolution == 'S':
+    elif resolution == 's':
         return round_down(datetime_variable, resolution) + datetime.timedelta(seconds=1)
 
 
@@ -193,12 +193,12 @@ def time_averager(in_file=None, average_step_str=None, out_file=None, in_variabl
         if minutes > 0:
             out_average_str += str(minutes) + ' minutes:'
         if minutes > 0:
-            round_resolution = 'T'
+            round_resolution = 'min'
         elif hours > 0:
-            round_resolution = 'H'
+            round_resolution = 'h'
         elif days > 0:
-            round_resolution = 'D'
-        freq_str = str(days) + 'D' + str(hours) + 'H' + str(minutes) + 'T0S'
+            round_resolution = 'd'
+        freq_str = str(days) + 'd' + str(hours) + 'h' + str(minutes) + 'min0s'
         out_time_step = days * 86400 + hours * 3600 + minutes * 60
         half_days = half_time_delta.days
         half_hours = 0
@@ -218,8 +218,8 @@ def time_averager(in_file=None, average_step_str=None, out_file=None, in_variabl
         months = int(average_step_str)
         out_time_step = months * 30 * 86400
         if months == 12:
-            round_resolution = 'AS'
-            freq_str = '1AS'
+            round_resolution = 'YS'
+            freq_str = '1YS'
         else:
             round_resolution = 'MS'
             freq_str = str(months) + 'MS'
@@ -266,11 +266,11 @@ def time_averager(in_file=None, average_step_str=None, out_file=None, in_variabl
         elif time_step < 86400:
             round_frequency = '10min'
         elif time_step < 10 * 86400:
-            round_frequency = 'H'
+            round_frequency = 'h'
         elif time_step < 31 * 86400:
-            round_frequency = '10H'
+            round_frequency = '10h'
         else:
-            round_frequency = 'D'
+            round_frequency = 'd'
         in_time_stamps = in_time_stamps.dt.round(round_frequency)
         [in_time_stamps, unique_indices] = \
             np.unique(in_time_stamps, return_index=True)
@@ -282,15 +282,15 @@ def time_averager(in_file=None, average_step_str=None, out_file=None, in_variabl
         start -= pd.Timedelta(seconds=np.floor_divide(out_time_step, 2))
         end -= pd.Timedelta(seconds=np.floor_divide(out_time_step, 2))
     out_left_time_bounds = pd.date_range(start, end, freq=freq_str)
-    if (round_resolution != 'MS') and (round_resolution != 'AS'):
+    if (round_resolution != 'MS') and (round_resolution != 'YS'):
         out_time_stamps = out_left_time_bounds + half_time_delta
         out_right_time_bounds = out_time_stamps + half_time_delta
     elif round_resolution == 'MS':
         out_time_stamps = out_left_time_bounds + pd.Timedelta(days=14)
-        out_right_time_bounds = pd.date_range(start, end + dateutil.relativedelta.relativedelta(months=1), freq='M')
-    elif round_resolution == 'AS':
+        out_right_time_bounds = pd.date_range(start, end + dateutil.relativedelta.relativedelta(months=1), freq='ME')
+    elif round_resolution == 'YS':
         out_time_stamps = out_left_time_bounds + pd.Timedelta(days=182)
-        out_right_time_bounds = pd.date_range(start, end + dateutil.relativedelta.relativedelta(years=1), freq='A')
+        out_right_time_bounds = pd.date_range(start, end + dateutil.relativedelta.relativedelta(years=1), freq='YE')
 
     if verbose:
         print(' Creating output dataset.')
@@ -308,7 +308,6 @@ def time_averager(in_file=None, average_step_str=None, out_file=None, in_variabl
         out_data.createDimension('axis_nbounds', 2)
     except RuntimeError:
         pass
-
 
     if verbose:
         print(' Creating dimension variables.')

@@ -1,0 +1,29 @@
+# update if change version
+ARG PYTHON_VERSION="3.12"
+ARG LINUX_DIST="alpine"
+
+FROM python:${PYTHON_VERSION}-${LINUX_DIST}
+ARG PYTHON_VERSION
+
+WORKDIR /usr/src/app 
+
+# alpine
+RUN apk update
+RUN apk upgrade
+
+RUN apk add --no-cache wget vim nano proj proj-util proj-dev build-base py3-pyproject-api geos-dev hdf5-dev netcdf-dev gdal-dev
+
+RUN pip install --upgrade pip
+
+ADD docker/requirements.txt /usr/src/app
+RUN pip install -r requirements.txt
+
+RUN mkdir /usr/local/lib/python${PYTHON_VERSION}/site-packages/SOURCE
+ADD SOURCE /usr/local/lib/python${PYTHON_VERSION}/site-packages/SOURCE
+
+# alpine
+RUN apk del proj-dev build-base geos-dev hdf5-dev netcdf-dev gdal-dev
+RUN apk -v cache clean
+RUN rm -vrf /var/cache/apk/*
+RUN pip cache purge
+
